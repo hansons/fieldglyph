@@ -96,7 +96,7 @@ export function renderEvolution(container) {
   container.querySelectorAll('[data-era]').forEach((btn) =>
     btn.addEventListener('click', () => {
       const [from, to] = btn.dataset.era.split(',').map(Number);
-      update({ view: 'map', years: [from, to] });
+      update({ view: 'map', dates: [`${from}-01-01`, `${to}-12-31`] });
     }),
   );
   container.querySelectorAll('[data-tag]').forEach((el) => {

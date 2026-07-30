@@ -1,4 +1,4 @@
-import { getState, toggleSetValue, update, clearFilters, hasActiveFilters } from '../state.js';
+import { getState, toggleSetValue, update, clearFilters, hasActiveFilters, isWholeYearRange } from '../state.js';
 import { getFormations, getMeta, applyFilters, positionBucket } from '../data.js';
 import { esc } from '../format.js';
 
@@ -75,6 +75,17 @@ function render() {
   const tagged = meta.totals.tagged;
   const total = meta.totals.records;
 
+  // Dataset extent bounds the date pickers and stands in for a blank input.
+  let minYear = Infinity;
+  let maxYear = -Infinity;
+  for (const r of all) {
+    if (r._year === null) continue;
+    if (r._year < minYear) minYear = r._year;
+    if (r._year > maxYear) maxYear = r._year;
+  }
+  const dataMin = Number.isFinite(minYear) ? `${String(minYear).padStart(4, '0')}-01-01` : '1900-01-01';
+  const dataMax = Number.isFinite(maxYear) ? `${maxYear}-12-31` : '2100-12-31';
+
   const topCountries = [...byCountry.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
 
   // Active-filter pills: visible even when the panel is collapsed, so state is
@@ -88,10 +99,19 @@ function render() {
   for (const v of state.position) pills.push({ key: 'position', value: v, label: POSITION_LABELS[v] ?? v });
   for (const v of state.verification) pills.push({ key: 'verification', value: v, label: STATUS_LABELS[v] ?? v });
   for (const v of state.countries) pills.push({ key: 'countries', value: v, label: v || '(unknown)' });
-  if (state.years) pills.push({ key: '_years', value: '', label: `${state.years[0]}–${state.years[1]}` });
+  if (state.dates) {
+    const label = isWholeYearRange(state.dates)
+      ? `${Number(state.dates[0].slice(0, 4))}–${Number(state.dates[1].slice(0, 4))}`
+      : `${state.dates[0]} – ${state.dates[1]}`;
+    pills.push({ key: '_dates', value: '', label });
+  }
 
   const open = isOpen();
   const activeCount = pills.length + (state.query ? 1 : 0);
+
+  // Chrome commits date inputs while they still hold focus — remember which one
+  // the user is in so the re-render below can hand focus back.
+  const focusedId = document.activeElement && root.contains(document.activeElement) ? document.activeElement.id : null;
 
   root.innerHTML = `
     <div class="filter-summary">
@@ -111,6 +131,15 @@ function render() {
     </div>
 
     <div class="filter-groups" id="filter-groups" ${open ? '' : 'hidden'}>
+      <div class="filter-group" role="group" aria-label="Date range">
+        <label>Date</label>
+        <input type="date" id="date-from" aria-label="Show formations from this date"
+          value="${state.dates?.[0] ?? ''}" min="${dataMin}" max="${dataMax}">
+        <span class="date-sep">–</span>
+        <input type="date" id="date-to" aria-label="Show formations up to this date"
+          value="${state.dates?.[1] ?? ''}" min="${dataMin}" max="${dataMax}">
+      </div>
+
       <div class="filter-group" role="group" aria-label="Sources">
         <label>Source</label>
         ${meta.sources.map((s) => chip(SOURCE_LABELS[s.key] ?? s.key, 'sources', s.key, bySource.get(s.key) ?? 0, state.sources.has(s.key), s.name)).join('')}
@@ -171,10 +200,26 @@ function render() {
   });
   root.querySelectorAll('[data-pill-key]').forEach((el) => {
     el.addEventListener('click', () => {
-      if (el.dataset.pillKey === '_years') update({ years: null });
+      if (el.dataset.pillKey === '_dates') update({ dates: null });
       else toggleSetValue(el.dataset.pillKey, el.dataset.pillValue);
     });
   });
+  const dateFrom = root.querySelector('#date-from');
+  const dateTo = root.querySelector('#date-to');
+  const onDateChange = () => {
+    const f = dateFrom.value;
+    const t = dateTo.value;
+    if (!f && !t) {
+      update({ dates: null });
+      return;
+    }
+    // A blank side means "open-ended" — substitute the dataset extent.
+    const from = f || dataMin;
+    const to = t || dataMax;
+    update({ dates: from <= to ? [from, to] : [to, from] });
+  };
+  dateFrom.addEventListener('change', onDateChange);
+  dateTo.addEventListener('change', onDateChange);
   root.querySelector('#filters-toggle').addEventListener('click', () => {
     localStorage.setItem(OPEN_KEY, isOpen() ? '0' : '1');
     render();
@@ -186,6 +231,10 @@ function render() {
     debounce = setTimeout(() => update({ query: search.value }), 180);
   });
   root.querySelector('#clear-filters')?.addEventListener('click', clearFilters);
+
+  if (focusedId === 'date-from' || focusedId === 'date-to') {
+    root.querySelector(`#${focusedId}`)?.focus();
+  }
 
   // Re-renders steal focus from the search box mid-typing — give it back.
   if (state.query && document.activeElement === document.body) {

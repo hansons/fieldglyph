@@ -19,6 +19,15 @@ export async function loadData() {
     r._search = [r.t, r.ln, r.ar, r.co].filter(Boolean).join(' ').toLowerCase();
     r._year = r.d ? Number(r.d.slice(0, 4)) : null;
     r._month = r.d && r.d.length >= 7 ? Number(r.d.slice(5, 7)) : null;
+    // Date interval for range filtering, compared as strings. Partial dates
+    // ('1990', '1990-07') span their whole year/month so they match any range
+    // they could fall in; '-31' is a lexicographic month-end, not a real day.
+    if (r.d) {
+      r._from = (r.d + '-01-01').slice(0, 10);
+      r._to = r.d.length === 4 ? `${r.d}-12-31` : r.d.length === 7 ? `${r.d}-31` : r.d;
+    } else {
+      r._from = r._to = null;
+    }
   }
   return { formations, meta };
 }
@@ -58,9 +67,9 @@ function positionBucket(r) {
 export function applyFilters(state) {
   const q = state.query.trim().toLowerCase();
   return formations.filter((r) => {
-    if (state.years) {
-      if (r._year === null) return false;
-      if (r._year < state.years[0] || r._year > state.years[1]) return false;
+    if (state.dates) {
+      if (r._from === null) return false;
+      if (r._to < state.dates[0] || r._from > state.dates[1]) return false;
     }
     if (state.months.size > 0) {
       if (r._month === null || !state.months.has(String(r._month))) return false;

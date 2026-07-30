@@ -3,7 +3,7 @@
 
 const DEFAULTS = () => ({
   view: 'map',
-  years: null, // [from, to] or null = all
+  dates: null, // ['YYYY-MM-DD', 'YYYY-MM-DD'] or null = all time
   months: new Set(),
   tags: new Set(),
   sources: new Set(),
@@ -53,7 +53,7 @@ export function clearFilters() {
 
 export function hasActiveFilters() {
   return (
-    state.years !== null ||
+    state.dates !== null ||
     state.months.size > 0 ||
     state.tags.size > 0 ||
     state.sources.size > 0 ||
@@ -70,9 +70,21 @@ function encodeSet(set) {
   return [...set].join(',');
 }
 
+// A range spanning whole calendar years keeps the short y=1990-2003 hash form
+// (also what old bookmarks use); anything finer serializes as d=from..to.
+export function isWholeYearRange(dates) {
+  return dates[0].endsWith('-01-01') && dates[1].endsWith('-12-31');
+}
+
 function writeHash() {
   const params = new URLSearchParams();
-  if (state.years) params.set('y', `${state.years[0]}-${state.years[1]}`);
+  if (state.dates) {
+    if (isWholeYearRange(state.dates)) {
+      params.set('y', `${Number(state.dates[0].slice(0, 4))}-${Number(state.dates[1].slice(0, 4))}`);
+    } else {
+      params.set('d', `${state.dates[0]}..${state.dates[1]}`);
+    }
+  }
   if (state.months.size) params.set('mo', encodeSet(state.months));
   if (state.tags.size) params.set('tg', encodeSet(state.tags));
   if (state.sources.size) params.set('src', encodeSet(state.sources));
@@ -108,7 +120,13 @@ export function readHash() {
   const years = params.get('y');
   if (years && /^\d{3,4}-\d{3,4}$/.test(years)) {
     const [a, b] = years.split('-').map(Number);
-    next.years = [Math.min(a, b), Math.max(a, b)];
+    const pad = (y) => String(y).padStart(4, '0');
+    next.dates = [`${pad(Math.min(a, b))}-01-01`, `${pad(Math.max(a, b))}-12-31`];
+  }
+  const dates = params.get('d');
+  if (dates && /^\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}$/.test(dates)) {
+    const [a, b] = dates.split('..');
+    next.dates = a <= b ? [a, b] : [b, a];
   }
   const setKeys = { mo: 'months', tg: 'tags', src: 'sources', co: 'countries', vs: 'verification', cs: 'position' };
   for (const [param, key] of Object.entries(setKeys)) {

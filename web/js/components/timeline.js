@@ -1,4 +1,4 @@
-import { getState, update } from '../state.js';
+import { getState, update, isWholeYearRange } from '../state.js';
 import { applyFilters } from '../data.js';
 
 // Timeline footer: per-year histogram with a compressed pre-modern zone, a
@@ -29,10 +29,20 @@ function yearExtent(records) {
   return [min, max];
 }
 
+// The brush works in whole years; date-level precision lives in the filter
+// panel's date inputs. Both drive the same `dates` state.
+function yearsOf(dates) {
+  return [Number(dates[0].slice(0, 4)), Number(dates[1].slice(0, 4))];
+}
+
+function setYearRange(a, b) {
+  update({ dates: [`${Math.min(a, b)}-01-01`, `${Math.max(a, b)}-12-31`] });
+}
+
 function render() {
   const state = getState();
-  // Histogram reflects all non-year filters, so brushing shows "what's here".
-  const relaxed = { ...state, years: null };
+  // Histogram reflects all non-date filters, so brushing shows "what's here".
+  const relaxed = { ...state, dates: null };
   const records = applyFilters(relaxed);
 
   const byYear = new Map();
@@ -68,8 +78,13 @@ function render() {
     return historicZoneW + ((y - modernStart) / Math.max(1, maxYear - modernStart)) * (modernZoneW - barW);
   };
 
-  const range = state.years ?? [minYear, maxYear];
+  const range = state.dates ? yearsOf(state.dates) : [minYear, maxYear];
   const inRange = (y) => y >= range[0] && y <= range[1];
+  // Precise sub-year ranges (set via the date inputs) show their exact dates.
+  const rangeLabel =
+    state.dates && !isWholeYearRange(state.dates)
+      ? `${state.dates[0]} – ${state.dates[1]}`
+      : `${range[0]} – ${range[1]}`;
 
   let bars = '';
   for (const y of historic) {
@@ -94,9 +109,13 @@ function render() {
   const x1 = xOfYear(Math.max(range[0], minYear));
   const x2 = xOfYear(Math.min(range[1], maxYear)) + barW;
 
+  // Re-rendering replaces the focused handle — remember it so keyboard
+  // adjustment survives the update it just caused.
+  const focusedId = document.activeElement && root.contains(document.activeElement) ? document.activeElement.id : null;
+
   root.innerHTML = `
     <div class="timeline-head">
-      <span class="range-label">${range[0]} – ${range[1]}</span>
+      <span class="range-label">${rangeLabel}</span>
       <button id="tl-play" title="Step through years">${playTimer ? '⏸' : '▶'}</button>
       <button id="tl-reset" title="Reset to full range">↺ all years</button>
       <span>${records.length} formations${undated ? ` · ${undated} undated (list only)` : ''}</span>
@@ -112,9 +131,11 @@ function render() {
     </svg>
   `;
 
-  const svg = root.querySelector('svg');
   const yearAtX = (px) => {
-    const rect = svg.getBoundingClientRect();
+    // Each drag update re-renders this component, detaching the SVG this
+    // closure was built with — a detached rect is all zeros and the math
+    // would fling the handle to the far end. Always measure the live SVG.
+    const rect = root.querySelector('svg').getBoundingClientRect();
     const x = ((px - rect.left) / rect.width) * width;
     if (historicZoneW > 0 && x < historicZoneW) {
       const idx = Math.round((x - 10) / 14);
@@ -131,9 +152,11 @@ function render() {
       handle.setPointerCapture(e.pointerId);
       const move = (ev) => {
         const y = Math.max(minYear, Math.min(maxYear, yearAtX(ev.clientX)));
-        const next = [...(getState().years ?? [minYear, maxYear])];
+        const cur = getState().dates;
+        const next = cur ? yearsOf(cur) : [minYear, maxYear];
+        if (next[which] === y) return; // same year — skip the re-render churn
         next[which] = y;
-        update({ years: [Math.min(...next), Math.max(...next)] });
+        setYearRange(next[0], next[1]);
       };
       const up = () => {
         window.removeEventListener('pointermove', move);
@@ -146,15 +169,16 @@ function render() {
       const delta = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
       if (!delta) return;
       e.preventDefault();
-      const next = [...(getState().years ?? [minYear, maxYear])];
+      const cur = getState().dates;
+      const next = cur ? yearsOf(cur) : [minYear, maxYear];
       next[which] = Math.max(minYear, Math.min(maxYear, next[which] + delta));
-      update({ years: [Math.min(...next), Math.max(...next)] });
+      setYearRange(next[0], next[1]);
     });
   }
 
   root.querySelector('#tl-reset').addEventListener('click', () => {
     stopPlay();
-    update({ years: null });
+    update({ dates: null });
   });
 
   root.querySelector('#tl-play').addEventListener('click', () => {
@@ -165,19 +189,22 @@ function render() {
     }
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const stepMs = reduced ? 1600 : 800;
-    const [from, to] = getState().years ?? [Math.max(MODERN_START, minYear), maxYear];
+    const cur = getState().dates;
+    const [from, to] = cur ? yearsOf(cur) : [Math.max(MODERN_START, minYear), maxYear];
     let year = from;
-    update({ years: [year, year] });
+    setYearRange(year, year);
     playTimer = setInterval(() => {
       year++;
       if (year > to) {
         stopPlay();
-        update({ years: [from, to] });
+        setYearRange(from, to);
         return;
       }
-      update({ years: [year, year] });
+      setYearRange(year, year);
     }, stepMs);
   });
+
+  if (focusedId) root.querySelector(`#${focusedId}`)?.focus();
 }
 
 function stopPlay() {
