@@ -131,12 +131,15 @@ function render() {
     </svg>
   `;
 
-  const yearAtX = (px) => {
+  const xAtPx = (px) => {
     // Each drag update re-renders this component, detaching the SVG this
     // closure was built with — a detached rect is all zeros and the math
     // would fling the handle to the far end. Always measure the live SVG.
     const rect = root.querySelector('svg').getBoundingClientRect();
-    const x = ((px - rect.left) / rect.width) * width;
+    return ((px - rect.left) / rect.width) * width;
+  };
+  const yearAtX = (px) => {
+    const x = xAtPx(px);
     if (historicZoneW > 0 && x < historicZoneW) {
       const idx = Math.round((x - 10) / 14);
       return historic[Math.max(0, Math.min(historic.length - 1, idx))] ?? MODERN_START;
@@ -145,34 +148,62 @@ function render() {
     return Math.round(modernStart + frac * (maxYear - modernStart));
   };
 
+  // The whole histogram is the drag surface: press anywhere and the nearest
+  // handle jumps to the pointer and follows it. Handles keep their identity —
+  // the start clamps at the end and vice versa, so they never swap mid-drag.
+  const clampYear = (y) => Math.max(minYear, Math.min(maxYear, y));
+  const currentYears = () => {
+    const cur = getState().dates;
+    return cur ? yearsOf(cur) : [minYear, maxYear];
+  };
+  const placeHandle = (which, y) => {
+    const next = currentYears();
+    const clamped = which === 0 ? Math.min(clampYear(y), next[1]) : Math.max(clampYear(y), next[0]);
+    if (next[which] === clamped) return; // same year — skip the re-render churn
+    next[which] = clamped;
+    setYearRange(next[0], next[1]);
+  };
+
+  root.querySelector('svg').addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const base = currentYears();
+    const y0 = clampYear(yearAtX(e.clientX));
+    let which;
+    if (base[0] === base[1]) {
+      // Coincident handles: the side you pull toward decides which one moves —
+      // pressing dead-on defers the choice to the first move.
+      if (y0 !== base[0]) which = y0 < base[0] ? 0 : 1;
+    } else {
+      // Nearest by PIXELS (x1/x2 are the drawn handle positions), not by year —
+      // the compressed pre-1960 zone puts early years pixel-close but
+      // century-far, and year distance would always pick the modern handle.
+      const xIn = xAtPx(e.clientX);
+      which = Math.abs(xIn - x1) <= Math.abs(xIn - x2) ? 0 : 1;
+    }
+    if (which !== undefined) placeHandle(which, y0);
+    const move = (ev) => {
+      const y = clampYear(yearAtX(ev.clientX));
+      if (which === undefined) {
+        if (y === base[0]) return;
+        which = y < base[0] ? 0 : 1;
+      }
+      placeHandle(which, y);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  });
+
   for (const handle of root.querySelectorAll('.brush-handle')) {
     const which = Number(handle.dataset.handle);
-    handle.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      handle.setPointerCapture(e.pointerId);
-      const move = (ev) => {
-        const y = Math.max(minYear, Math.min(maxYear, yearAtX(ev.clientX)));
-        const cur = getState().dates;
-        const next = cur ? yearsOf(cur) : [minYear, maxYear];
-        if (next[which] === y) return; // same year — skip the re-render churn
-        next[which] = y;
-        setYearRange(next[0], next[1]);
-      };
-      const up = () => {
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', up);
-      };
-      window.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', up);
-    });
     handle.addEventListener('keydown', (e) => {
       const delta = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
       if (!delta) return;
       e.preventDefault();
-      const cur = getState().dates;
-      const next = cur ? yearsOf(cur) : [minYear, maxYear];
-      next[which] = Math.max(minYear, Math.min(maxYear, next[which] + delta));
-      setYearRange(next[0], next[1]);
+      placeHandle(which, currentYears()[which] + delta);
     });
   }
 

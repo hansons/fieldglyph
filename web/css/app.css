@@ -297,12 +297,13 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
 .timeline-head { display: flex; align-items: center; gap: 12px; font-size: 0.8rem; color: var(--text-dim); }
 .timeline-head .range-label { font-weight: 600; color: var(--text); min-width: 110px; }
 /* overflow: visible — the range-end circle sits on the viewBox edge; clipped,
-   its far half would be unhittable and the handle undraggable. */
-.timeline svg { display: block; width: 100%; height: 64px; overflow: visible; }
+   its far half would be unhittable. The whole SVG is the brush drag surface,
+   so it owns the cursor and blocks touch scrolling. */
+.timeline svg { display: block; width: 100%; height: 64px; overflow: visible; cursor: ew-resize; touch-action: none; }
 .timeline .bar { fill: var(--accent); opacity: 0.45; }
 .timeline .bar.in-range { opacity: 1; }
 .timeline .hist-divider { stroke: var(--border); stroke-dasharray: 3 3; }
-.timeline .brush-handle { fill: var(--bg-raised); stroke: var(--accent); stroke-width: 2; cursor: ew-resize; touch-action: none; }
+.timeline .brush-handle { fill: var(--bg-raised); stroke: var(--accent); stroke-width: 2; cursor: ew-resize; }
 .timeline .brush-region { fill: var(--accent); opacity: 0.08; }
 .timeline .era-label { font-size: 9px; fill: var(--text-dim); }
 
