@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+
+<rdf:RDF
+xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+xmlns="http://my.netscape.com/rdf/simple/0.9/">
+
+<channel>
+<title>Latest Crop Circles</title>
+<link>http://ccdb.cropcircleresearch.com/</link>
+<description>Latest Crop Circle Events</description>
+</channel>
+
+<image>
+<title>Crop Circle Research</title>
+<url>http://www.cropcircleresearch.com/i/panel.png</url>
+<link>http://www.cropcircleresearch.com/</link>
+</image>
+
+<item>
+<title>Etchilhampton (2), Wiltshire, UK - 15th Jul 2008</title>
+<link>http://ccdb.cropcircleresearch.com/?d=uk2008cf</link>
+<description>A dumbbell and an additional circle and curved path with two 'teeth' circles, resembling a smiling face.</description>
+</item>
+
+<item>
+<title>Barton le Clay, Bedfordshire, UK - 14th Jul 2008</title>
+<link>http://ccdb.cropcircleresearch.com/?d=uk2008ce</link>
+<description>A complex 'pentagram' formation surrounded by two crescent rings.</description>
+</item>
+
+<item>
+<title>Etchilhampton Hill, Wiltshire, UK - 14th Jul 2008</title>
+<link>http://ccdb.cropcircleresearch.com/?d=uk2008cc</link>
+<description>A line of seven circles intersected by a line of five circles, forming a 'cross' design, with curved paths interleaving the circles to form an outer border.</description>
+</item>
+
+<item>
+<title>Horton nr Devizes, Wiltshire, UK - 24th Jun 2008</title>
+<link>http://ccdb.cropcircleresearch.com/?d=uk2008ap</link>
+<description>A circle and a ring with a number of paths, conveniently positioned along the tramlines.</description>
+</item>
+
+<item>
+<title>Furze Knoll, Wiltshire, UK - 20th Jun 2008</title>
+<link>http://ccdb.cropcircleresearch.com/?d=uk2008ao</link>
+<description>A large formation with multiple arcs organised around an outer ring.</description>
+</item>
+
+<item>
+<title>Uffington White Horse, Oxfordshire, UK - 13th Jun 2008</title>
+<link>http://ccdb.cropcircleresearch.com/?d=uk2008ak</link>
+<description>A large ring with a sector cut out and various line arcs.</description>
+</item>
+
+<item>
+<title>Hackpen Hill, Wiltshire, UK - 24th May 2008</title>
+<link>http://ccdb.cropcircleresearch.com/?d=uk2008ae</link>
+<description>Six overlapping circle segments forming a large, approx 650' dia. formation.</description>
+</item>
+
+</rdf:RDF>

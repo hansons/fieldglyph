@@ -1,0 +1,191 @@
+import { getState, update } from '../state.js';
+import { getById, getDetail } from '../data.js';
+import {
+  esc,
+  formatDate,
+  PRECISION_LABEL,
+  positionBadge,
+  verificationBadge,
+  waybackUrlFor,
+} from '../format.js';
+
+let currentOrder = [];
+let drawerEl;
+let lightboxEl;
+
+function panelChanged(id) {
+  // Let the map react (radius circle, resize) without importing map code here.
+  document.dispatchEvent(new CustomEvent('panel-changed', { detail: { id } }));
+}
+
+export function initDrawer() {
+  drawerEl = document.getElementById('drawer');
+  lightboxEl = document.getElementById('lightbox');
+  renderPlaceholder();
+  document.addEventListener('keydown', (e) => {
+    if (lightboxEl && !lightboxEl.hidden && e.key === 'Escape') {
+      closeLightbox();
+      return;
+    }
+    if (document.body.classList.contains('panel-closed')) return;
+    if (e.key === 'Escape') closeDrawer();
+    if (getState().selected === null) return;
+    if (e.key === 'ArrowLeft') step(-1);
+    if (e.key === 'ArrowRight') step(1);
+  });
+}
+
+function renderPlaceholder() {
+  drawerEl.innerHTML = `
+    <div class="drawer-nav">
+      <span class="spacer"></span>
+      <button id="dr-close" title="Close panel (Esc)">✕</button>
+    </div>
+    <div class="drawer-placeholder">
+      <div class="glyph">◎</div>
+      <p>Click a formation — on the map or in the list — and its details appear here.</p>
+      <p>Then <kbd>←</kbd> <kbd>→</kbd> step through neighbouring records.</p>
+    </div>`;
+  drawerEl.querySelector('#dr-close').addEventListener('click', closeDrawer);
+}
+
+export async function openDrawer(id, orderedRecords = null) {
+  if (orderedRecords) currentOrder = orderedRecords;
+  const record = getById(id);
+  if (!record) return;
+  update({ selected: id }, { silent: true });
+
+  document.body.classList.remove('panel-closed');
+  drawerEl.innerHTML = '<div class="drawer-body"><p>Loading…</p></div>';
+
+  let detail;
+  try {
+    detail = await getDetail(id);
+  } catch {
+    detail = null;
+  }
+  // A faster click may have superseded this load — never render a stale record.
+  if (getState().selected !== id) return;
+  render(record, detail);
+  panelChanged(id);
+}
+
+export function closeDrawer() {
+  document.body.classList.add('panel-closed');
+  renderPlaceholder();
+  update({ selected: null }, { silent: true });
+  panelChanged(null);
+}
+
+function step(direction) {
+  const state = getState();
+  if (currentOrder.length === 0 || !state.selected) return;
+  const idx = currentOrder.findIndex((r) => r.id === state.selected);
+  const next = currentOrder[idx + direction];
+  if (next) openDrawer(next.id);
+}
+
+function heroBlock(record, detail) {
+  const deadSource = record.src === 'ircup';
+  if (!record.hi || deadSource) {
+    const first = detail?.media?.[0];
+    if (!first) return '<div class="drawer-hero-fallback">◎<br>No imagery preserved for this formation</div>';
+    return `<div class="drawer-hero-fallback">◎<br>Source offline — imagery may survive in the Wayback Machine<br>
+      <a href="${esc(waybackUrlFor(first.u))}" target="_blank" rel="noopener">Try Wayback Machine ↗</a></div>`;
+  }
+  return `<img class="drawer-hero" src="${esc(record.hi)}" alt="${esc(record.t ?? 'formation photo')}"
+    onerror="this.outerHTML='<div class=&quot;drawer-hero-fallback&quot;>📷 Image unavailable from origin<br><a href=&quot;${esc(waybackUrlFor(record.hi))}&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;>Try Wayback Machine ↗</a></div>'">`;
+}
+
+function mediaStrip(detail) {
+  if (!detail?.media?.length) return '';
+  const items = detail.media
+    .map((m) => {
+      if (m.k === 'video') {
+        return `<a class="media-link-card" href="${esc(m.u)}" target="_blank" rel="noopener">▶ Video<br><small>${esc(m.cp ?? '')}</small></a>`;
+      }
+      const caption = m.ph ?? m.cp ?? '';
+      return `<figure>
+        <img loading="lazy" src="${esc(m.u)}" alt="${esc(m.c ?? caption ?? 'formation image')}"
+          data-full="${esc(m.u)}" data-caption="${esc(caption)}"
+          onerror="this.closest('figure').innerHTML='<a class=&quot;media-link-card&quot; href=&quot;${esc(waybackUrlFor(m.u))}&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;>📷 offline<br>Wayback ↗</a>'">
+        <figcaption title="${esc(caption)}">${m.k === 'diagram' ? '✎ ' : ''}${esc(caption) || '&nbsp;'}</figcaption>
+      </figure>`;
+    })
+    .join('');
+  return `<div class="media-strip">${items}</div>`;
+}
+
+function render(record, detail) {
+  const dateLine = `${formatDate(record.d, record.dp)} <span class="badge">${esc(PRECISION_LABEL[record.dp] ?? '')}</span>`;
+  const place = [record.ln, record.ar, record.co].filter(Boolean).join(', ');
+
+  drawerEl.innerHTML = `
+    <div class="drawer-nav">
+      <button id="dr-prev" title="Previous (←)">←</button>
+      <button id="dr-next" title="Next (→)">→</button>
+      <span class="spacer"></span>
+      <button id="dr-close" title="Close panel (Esc)">✕</button>
+    </div>
+    ${heroBlock(record, detail)}
+    <div class="drawer-body">
+      <h2>${esc(record.t ?? '(untitled formation)')}</h2>
+      <div class="drawer-sub">${dateLine}</div>
+      <div class="drawer-sub">${esc(place)}</div>
+      <div class="badge-row">
+        ${positionBadge(record.cs)}
+        ${verificationBadge(record.vs)}
+        ${record.ct ? `<span class="badge">crop: ${esc(record.ct)}</span>` : ''}
+      </div>
+      ${(record.tg ?? []).length ? `<div class="badge-row">${record.tg.map((t) => `<button class="chip" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div>` : ''}
+      ${detail?.sym ? `<div class="symbol-card">
+        <div class="symbol-frame">${detail.sym.svg}</div>
+        <div class="symbol-caption">Symbolic representation — AI-derived, curator-approved${detail.sym.cf ? ` · confidence ${esc(detail.sym.cf)}` : ''}</div>
+      </div>` : ''}
+      ${detail?.desc ? `<p class="drawer-desc">${esc(detail.desc)}</p>` : ''}
+      ${detail?.rb ? `<p class="drawer-sub">Reported by: ${esc(detail.rb)}</p>` : ''}
+      ${mediaStrip(detail)}
+      <div class="provenance">
+        <dl>
+          <dt>Source</dt><dd><a href="${esc(detail?.su ?? '#')}" target="_blank" rel="noopener">${esc(detail?.su ?? 'unknown')}</a></dd>
+          ${detail?.wt ? `<dt>Provenance</dt><dd class="wayback-line">Archived capture from the Wayback Machine, ${esc(detail.wt.slice(0, 4))}-${esc(detail.wt.slice(4, 6))}-${esc(detail.wt.slice(6, 8))}${detail.wu ? ` — <a href="${esc(detail.wu)}" target="_blank" rel="noopener">view capture</a>` : ''}</dd>` : ''}
+          ${detail?.ra ? `<dt>Retrieved</dt><dd>${esc(detail.ra.slice(0, 10))}</dd>` : ''}
+          ${detail?.og ? `<dt>OS grid ref</dt><dd>${esc(detail.og)}</dd>` : ''}
+          ${detail?.xid ? `<dt>Source ID</dt><dd>${esc(detail.xid)}</dd>` : ''}
+        </dl>
+        ${detail?.warn?.length ? `<details class="data-notes"><summary>Data notes (${detail.warn.length})</summary><ul>${detail.warn.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></details>` : ''}
+      </div>
+    </div>
+  `;
+
+  drawerEl.querySelector('#dr-close').addEventListener('click', closeDrawer);
+  drawerEl.querySelector('#dr-prev').addEventListener('click', () => step(-1));
+  drawerEl.querySelector('#dr-next').addEventListener('click', () => step(1));
+  drawerEl.querySelectorAll('[data-tag]').forEach((el) =>
+    el.addEventListener('click', () => {
+      closeDrawer();
+      import('../state.js').then((m) => m.toggleSetValue('tags', el.dataset.tag));
+    }),
+  );
+  drawerEl.querySelectorAll('.media-strip img[data-full]').forEach((img) =>
+    img.addEventListener('click', () => openLightbox(img.dataset.full, img.dataset.caption, detail?.su)),
+  );
+}
+
+function openLightbox(url, caption, sourceUrl) {
+  lightboxEl.hidden = false;
+  lightboxEl.innerHTML = `
+    <img src="${esc(url)}" alt="${esc(caption ?? '')}">
+    <div class="lb-caption">${esc(caption ?? '')}${sourceUrl ? ` — <a href="${esc(sourceUrl)}" target="_blank" rel="noopener">View on source page ↗</a>` : ''}</div>
+    <button id="lb-close">Close (Esc)</button>
+  `;
+  lightboxEl.querySelector('#lb-close').addEventListener('click', closeLightbox);
+  lightboxEl.addEventListener('click', (e) => {
+    if (e.target === lightboxEl) closeLightbox();
+  });
+}
+
+function closeLightbox() {
+  lightboxEl.hidden = true;
+  lightboxEl.innerHTML = '';
+}

@@ -1,0 +1,257 @@
+{
+  "generated": "2026-07-30T00:37:16.620Z",
+  "totals": {
+    "records": 2686,
+    "media": 15759,
+    "geocoded": 2162,
+    "tagged": 617,
+    "withText": 801,
+    "symbols": {}
+  },
+  "sources": [
+    {
+      "key": "cca",
+      "name": "Crop Circle Archives (cropcirclearchives.co.uk)",
+      "status": "active",
+      "baseUrl": "https://www.cropcirclearchives.co.uk",
+      "notes": "Crop Circle Connector's own archive of its pre-2014 database (same organization, public, no paywall), 1978-2013 plus international collections. Two page vintages: CCC-style slug-directory pages (later years) and flat per-formation pages (early years). MiscellaneousCircles section and direct-linked .jpg-only formations not yet harvested.",
+      "records": 1352,
+      "geocoded": 989,
+      "described": 0,
+      "wayback": 0,
+      "media": 10089
+    },
+    {
+      "key": "ccc",
+      "name": "Crop Circle Connector",
+      "status": "active",
+      "baseUrl": "https://www.cropcircleconnector.com",
+      "notes": "The largest active crop circle database, running since 1995 (Mark Fussell & Stuart Dike). Live site exposes 2014-present; pre-2014 years moved to cropcirclearchives.co.uk (same organization — future connector). Only aerial-shots pages are harvested so far; per-formation sub-pages (ground shots, diagrams, field reports) are a future enhancement. Images are per-photographer copyright: metadata + link-back only, never bulk-copied.",
+      "records": 459,
+      "geocoded": 306,
+      "described": 0,
+      "wayback": 0,
+      "media": 4680
+    },
+    {
+      "key": "dcca",
+      "name": "Dutch Crop Circle Archive",
+      "status": "abandoned_live",
+      "baseUrl": "https://www.dcca.nl",
+      "notes": "Founded 2000 by Robert Boerman. No new formations added since 2012 per the archive itself. As of the site's own \"last update\" footer (26-06-2025), Boerman has posted a notice offering the site for takeover, confirming ongoing abandonment.",
+      "records": 275,
+      "geocoded": 267,
+      "described": 234,
+      "wayback": 0,
+      "media": 536
+    },
+    {
+      "key": "iccra",
+      "name": "ICCRA (Independent Crop Circle Researchers Association)",
+      "status": "abandoned_live",
+      "baseUrl": "https://iccra.org",
+      "notes": "US formation reports organized by state, run by Jeffrey & Delsey Wilson. The site's own pages report last updates around 2008-2015 and it has been static since; still resolves live (http://www.iccra.org redirects to https://iccra.org). Detail-page filenames embed the city/county/date and are preserved as external IDs.",
+      "records": 593,
+      "geocoded": 593,
+      "described": 560,
+      "wayback": 0,
+      "media": 454
+    },
+    {
+      "key": "ircup",
+      "name": "IRCUP International Crop Circle Database",
+      "status": "dead",
+      "baseUrl": "http://ccdb.cropcircleresearch.com",
+      "notes": "Founded 1993 by Paul Vigay (died 2009); cropcircleresearch.com and the ccdb subdomain no longer resolve at all (DNS failure), confirmed 2026-07-28. The database itself required a paid/guest login even while live — every Wayback snapshot of every search and record URL shows only the sign-on wall, never real content, so the ~587 record IDs found in Wayback's CDX index are not recoverable. Only one snapshot (2014-08-13) of the site's RSS feed escaped the login gate, yielding 7 genuine formation records — that is this connector's full recovery.",
+      "records": 7,
+      "geocoded": 7,
+      "described": 7,
+      "wayback": 7,
+      "media": 0
+    }
+  ],
+  "tags": [
+    {
+      "id": "circle",
+      "label": "Simple circle(s)",
+      "count": 508
+    },
+    {
+      "id": "ring",
+      "label": "Ring / concentric",
+      "count": 170
+    },
+    {
+      "id": "pathway",
+      "label": "Pathways / avenues",
+      "count": 99
+    },
+    {
+      "id": "oval",
+      "label": "Oval / ellipse",
+      "count": 32
+    },
+    {
+      "id": "pictogram",
+      "label": "Pictogram",
+      "count": 30
+    },
+    {
+      "id": "dumbbell",
+      "label": "Dumbbell",
+      "count": 23
+    },
+    {
+      "id": "cross",
+      "label": "Cross",
+      "count": 21
+    },
+    {
+      "id": "triangle",
+      "label": "Triangle / triskelion",
+      "count": 26
+    },
+    {
+      "id": "lattice",
+      "label": "Lattice / weave",
+      "count": 6
+    },
+    {
+      "id": "text-code",
+      "label": "Text / code",
+      "count": 2
+    },
+    {
+      "id": "star",
+      "label": "Star / pentagram",
+      "count": 13
+    },
+    {
+      "id": "key-claw",
+      "label": "Key / claw / comb",
+      "count": 11
+    },
+    {
+      "id": "grapeshot",
+      "label": "Grapeshot / satellites",
+      "count": 15
+    },
+    {
+      "id": "spiral",
+      "label": "Spiral",
+      "count": 9
+    },
+    {
+      "id": "celtic",
+      "label": "Celtic knot / cross",
+      "count": 6
+    },
+    {
+      "id": "figure",
+      "label": "Face / figure",
+      "count": 7
+    },
+    {
+      "id": "crescent",
+      "label": "Crescent / moon",
+      "count": 4
+    },
+    {
+      "id": "fractal",
+      "label": "Fractal",
+      "count": 3
+    },
+    {
+      "id": "serpent",
+      "label": "Serpent",
+      "count": 3
+    },
+    {
+      "id": "mandala",
+      "label": "Mandala / flower-of-life",
+      "count": 1
+    }
+  ],
+  "yearHistogram": {
+    "1590": 1,
+    "1909": 1,
+    "1919": 1,
+    "1920": 1,
+    "1927": 1,
+    "1932": 1,
+    "1933": 1,
+    "1935": 1,
+    "1945": 1,
+    "1950": 1,
+    "1952": 5,
+    "1953": 1,
+    "1955": 1,
+    "1956": 1,
+    "1957": 3,
+    "1959": 1,
+    "1962": 1,
+    "1964": 7,
+    "1965": 10,
+    "1966": 7,
+    "1967": 9,
+    "1968": 6,
+    "1969": 5,
+    "1970": 3,
+    "1971": 4,
+    "1972": 13,
+    "1973": 15,
+    "1974": 4,
+    "1975": 13,
+    "1976": 3,
+    "1977": 5,
+    "1978": 6,
+    "1979": 5,
+    "1980": 3,
+    "1981": 2,
+    "1982": 3,
+    "1983": 1,
+    "1984": 3,
+    "1985": 6,
+    "1986": 6,
+    "1987": 11,
+    "1988": 19,
+    "1989": 23,
+    "1990": 57,
+    "1991": 34,
+    "1992": 49,
+    "1993": 65,
+    "1994": 82,
+    "1995": 49,
+    "1996": 79,
+    "1997": 92,
+    "1998": 67,
+    "1999": 31,
+    "2000": 171,
+    "2001": 105,
+    "2002": 125,
+    "2003": 136,
+    "2004": 121,
+    "2005": 123,
+    "2006": 45,
+    "2007": 71,
+    "2008": 70,
+    "2009": 73,
+    "2010": 48,
+    "2011": 41,
+    "2012": 71,
+    "2013": 73,
+    "2014": 84,
+    "2015": 65,
+    "2016": 53,
+    "2017": 36,
+    "2018": 38,
+    "2019": 44,
+    "2020": 39,
+    "2021": 27,
+    "2022": 16,
+    "2023": 22,
+    "2024": 9,
+    "2025": 8,
+    "2026": 18
+  }
+}

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fieldglyph — Crop Circle Archive</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css">
+<link rel="stylesheet" href="vendor/markercluster/MarkerCluster.Default.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="topbar">
+  <h1 class="brand"><span class="brand-glyph" aria-hidden="true">◎</span> Fieldglyph</h1>
+  <nav class="views" role="tablist" aria-label="Views">
+    <a href="#/map" data-view="map" role="tab">Map <kbd>1</kbd></a>
+    <a href="#/list" data-view="list" role="tab">List <kbd>2</kbd></a>
+    <a href="#/evolution" data-view="evolution" role="tab">Evolution <kbd>3</kbd></a>
+    <a href="#/review" data-view="review" role="tab">Review <span id="review-badge" class="count-badge" hidden></span></a>
+    <a href="#/about" data-view="about" role="tab">About</a>
+  </nav>
+  <div class="topbar-actions">
+    <span id="result-count" class="result-count" aria-live="polite"></span>
+    <button id="theme-toggle" title="Toggle light/dark" aria-label="Toggle light/dark theme">◐</button>
+    <button id="help-toggle" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
+  </div>
+</header>
+
+<section id="filter-bar" class="filter-bar" aria-label="Filters"></section>
+
+<div class="main-row">
+  <main id="view-root" class="view-root"></main>
+  <aside id="drawer" class="drawer" aria-label="Formation detail"></aside>
+</div>
+
+<footer id="timeline" class="timeline" aria-label="Timeline"></footer>
+
+<div id="lightbox" class="lightbox" hidden role="dialog" aria-label="Image viewer"></div>
+
+<dialog id="help-dialog" class="help-dialog">
+  <h2>Keyboard shortcuts</h2>
+  <table>
+    <tr><td><kbd>/</kbd></td><td>Focus search</td></tr>
+    <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></td><td>Map / List / Evolution</td></tr>
+    <tr><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>Enter</kbd></td><td>Navigate list rows</td></tr>
+    <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Previous / next record (drawer open)</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Close drawer / dialog</td></tr>
+  </table>
+  <form method="dialog"><button>Close</button></form>
+</dialog>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="vendor/markercluster/leaflet.markercluster.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

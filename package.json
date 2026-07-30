@@ -1,0 +1,42 @@
+{
+  "name": "fieldglyph",
+  "version": "0.1.0",
+  "description": "Fieldglyph — a recovery archive and explorer for crop circle formations.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hansons/fieldglyph.git"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "scripts": {
+    "cli": "node src/cli.ts",
+    "scrape": "node src/cli.ts scrape",
+    "reparse": "node src/cli.ts reparse",
+    "sources": "node src/cli.ts sources",
+    "stats": "node src/cli.ts stats",
+    "migrate": "node src/db/migrate.ts",
+    "enrich": "node src/cli.ts enrich",
+    "export": "node src/cli.ts export",
+    "vendor": "node src/cli.ts vendor",
+    "serve": "node src/cli.ts serve",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"test/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
+    "better-sqlite3": "^11.8.1",
+    "cheerio": "^1.0.0",
+    "commander": "^13.1.0",
+    "leaflet": "^1.9.4",
+    "leaflet.markercluster": "^1.5.3",
+    "robots-parser": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3"
+  }
+}

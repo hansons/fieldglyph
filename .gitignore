@@ -1,0 +1,8 @@
+# local-master data: the raw HTML recovery cache and the SQLite archive stay
+# on the curation machine; the publishable snapshot lives in web/data/ instead
+node_modules/
+data/raw/
+data/db/
+data/export/
+*.log
+.DS_Store
