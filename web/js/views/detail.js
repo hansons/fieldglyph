@@ -1,5 +1,5 @@
-import { getState, update } from '../state.js';
-import { getById, getDetail } from '../data.js';
+import { getState, update, subscribe } from '../state.js';
+import { getById, getDetail, applyFilters } from '../data.js';
 import {
   esc,
   formatDate,
@@ -13,6 +13,16 @@ let currentOrder = [];
 let drawerEl;
 let lightboxEl;
 
+// Idle slideshow: with nothing selected, the panel cycles through the aerial
+// shots of whatever the current filters show, so browsing needs no clicking.
+const SLIDE_MS = 4000;
+let slideTimer = null;
+let slideIdx = 0;
+let slideRecords = [];
+let slidePaused = false;
+let slideSignature = null;
+let resumeAtId = null; // unselecting a record resumes the gallery on it
+
 function panelChanged(id) {
   // Let the map react (radius circle, resize) without importing map code here.
   document.dispatchEvent(new CustomEvent('panel-changed', { detail: { id } }));
@@ -21,35 +31,150 @@ function panelChanged(id) {
 export function initDrawer() {
   drawerEl = document.getElementById('drawer');
   lightboxEl = document.getElementById('lightbox');
+  slidePaused = matchMedia('(prefers-reduced-motion: reduce)').matches;
   renderPlaceholder();
+
+  // Filters changed while idling → rebuild the slideshow over the new set.
+  subscribe(() => {
+    if (getState().selected !== null) return;
+    if (document.body.classList.contains('panel-closed')) return;
+    const filtered = applyFilters(getState());
+    const sig = `${filtered.length}:${filtered[0]?.id ?? ''}:${filtered[filtered.length - 1]?.id ?? ''}`;
+    if (sig !== slideSignature) renderPlaceholder();
+  });
+
   document.addEventListener('keydown', (e) => {
     if (lightboxEl && !lightboxEl.hidden && e.key === 'Escape') {
       closeLightbox();
       return;
     }
+    if (e.target.matches('input, textarea, select')) return;
     if (document.body.classList.contains('panel-closed')) return;
-    if (e.key === 'Escape') closeDrawer();
-    if (getState().selected === null) return;
+    // Esc is two-step: record → back to the gallery, gallery → close panel.
+    if (e.key === 'Escape') {
+      if (getState().selected !== null) deselect();
+      else closeDrawer();
+    }
+    if (getState().selected === null) {
+      if (e.key === 'ArrowLeft') slideStep(-1);
+      if (e.key === 'ArrowRight') slideStep(1);
+      return;
+    }
     if (e.key === 'ArrowLeft') step(-1);
     if (e.key === 'ArrowRight') step(1);
   });
 }
 
-function renderPlaceholder() {
+function stopSlideshow() {
+  if (slideTimer) {
+    clearInterval(slideTimer);
+    slideTimer = null;
+  }
+}
+
+function startSlideshow() {
+  stopSlideshow();
+  if (!slidePaused && slideRecords.length > 1) {
+    slideTimer = setInterval(() => slideStep(1, { fromTimer: true }), SLIDE_MS);
+  }
+}
+
+function slideStep(direction, { fromTimer = false } = {}) {
+  if (slideRecords.length === 0) return;
+  slideIdx = (slideIdx + direction + slideRecords.length) % slideRecords.length;
+  renderSlide();
+  if (!fromTimer) startSlideshow(); // manual step: restart the dwell timer
+}
+
+function renderSlide() {
+  const r = slideRecords[slideIdx];
+  const place = [r.ln, r.ar, r.co].filter(Boolean).join(', ');
+  const focusedId = document.activeElement && drawerEl.contains(document.activeElement) ? document.activeElement.id : null;
+
   drawerEl.innerHTML = `
     <div class="drawer-nav">
+      <button id="ss-prev" title="Previous (←)">←</button>
+      <button id="ss-play" title="${slidePaused ? 'Play slideshow' : 'Pause slideshow'}">${slidePaused ? '▶' : '⏸'}</button>
+      <button id="ss-next" title="Next (→)">→</button>
+      <span class="ss-counter">${slideIdx + 1} / ${slideRecords.length}</span>
       <span class="spacer"></span>
       <button id="dr-close" title="Close panel (Esc)">✕</button>
     </div>
-    <div class="drawer-placeholder">
-      <div class="glyph">◎</div>
-      <p>Click a formation — on the map or in the list — and its details appear here.</p>
-      <p>Then <kbd>←</kbd> <kbd>→</kbd> step through neighbouring records.</p>
+    <button class="ss-slide" id="ss-open" title="Open this formation">
+      <img class="drawer-hero" src="${esc(r.hi)}" alt="${esc(r.t ?? 'formation photo')}">
+    </button>
+    <div class="drawer-body">
+      <h2>${esc(r.t ?? '(untitled formation)')}</h2>
+      <div class="drawer-sub">${formatDate(r.d, r.dp)}</div>
+      <div class="drawer-sub">${esc(place)}</div>
+      <p class="ss-hint">Slideshow of the ${slideRecords.length} formations with imagery in the
+        current view — click the photo to open the full record.</p>
     </div>`;
+
   drawerEl.querySelector('#dr-close').addEventListener('click', closeDrawer);
+  drawerEl.querySelector('#ss-prev').addEventListener('click', () => slideStep(-1));
+  drawerEl.querySelector('#ss-next').addEventListener('click', () => slideStep(1));
+  drawerEl.querySelector('#ss-play').addEventListener('click', () => {
+    slidePaused = !slidePaused;
+    startSlideshow();
+    renderSlide();
+  });
+  drawerEl.querySelector('#ss-open').addEventListener('click', () => openDrawer(r.id, currentOrder));
+  drawerEl.querySelector('.drawer-hero').addEventListener('error', () => {
+    // Dead image link — drop the record and keep the show going.
+    slideRecords = slideRecords.filter((rec) => rec !== r);
+    if (slideRecords.length === 0) {
+      renderPlaceholder();
+      return;
+    }
+    slideIdx = slideIdx % slideRecords.length;
+    renderSlide();
+  });
+
+  // Warm the next image so advancing doesn't flash a blank frame.
+  const next = slideRecords[(slideIdx + 1) % slideRecords.length];
+  if (next && next !== r) new Image().src = next.hi;
+
+  if (focusedId) drawerEl.querySelector(`#${focusedId}`)?.focus();
+}
+
+function renderPlaceholder() {
+  stopSlideshow();
+  const state = getState();
+  const filtered = applyFilters(state);
+  // Newest first, undated last — mirrors the list view's default order.
+  currentOrder = [...filtered].sort((a, b) => (b.d ?? '').localeCompare(a.d ?? ''));
+  slideRecords = currentOrder.filter((r) => r.hi && r.src !== 'ircup');
+  slideSignature = `${filtered.length}:${filtered[0]?.id ?? ''}:${filtered[filtered.length - 1]?.id ?? ''}`;
+  if (resumeAtId) {
+    const i = slideRecords.findIndex((r) => r.id === resumeAtId);
+    if (i >= 0) slideIdx = i;
+    resumeAtId = null;
+  }
+  if (slideIdx >= slideRecords.length) slideIdx = 0;
+
+  if (document.body.classList.contains('panel-closed') || slideRecords.length === 0) {
+    drawerEl.innerHTML = `
+      <div class="drawer-nav">
+        <span class="spacer"></span>
+        <button id="dr-close" title="Close panel (Esc)">✕</button>
+      </div>
+      <div class="drawer-placeholder">
+        <div class="glyph">◎</div>
+        <p>${slideRecords.length === 0 && filtered.length > 0 ? 'No preserved imagery in the current view.' : ''}
+          Click a formation — on the map or in the list — and its details appear here.</p>
+        <p>Then <kbd>←</kbd> <kbd>→</kbd> step through neighbouring records.</p>
+      </div>`;
+    drawerEl.querySelector('#dr-close').addEventListener('click', closeDrawer);
+    return;
+  }
+
+  renderSlide();
+  startSlideshow();
 }
 
 export async function openDrawer(id, orderedRecords = null) {
+  stopSlideshow();
   if (orderedRecords) currentOrder = orderedRecords;
   const record = getById(id);
   if (!record) return;
@@ -74,6 +199,17 @@ export function closeDrawer() {
   document.body.classList.add('panel-closed');
   renderPlaceholder();
   update({ selected: null }, { silent: true });
+  panelChanged(null);
+}
+
+// Unselect: leave the record but keep the panel open, resuming the gallery
+// slideshow on the record just viewed.
+export function deselect() {
+  const id = getState().selected;
+  if (id === null) return;
+  update({ selected: null }, { silent: true });
+  resumeAtId = id;
+  renderPlaceholder();
   panelChanged(null);
 }
 
@@ -124,8 +260,9 @@ function render(record, detail) {
     <div class="drawer-nav">
       <button id="dr-prev" title="Previous (←)">←</button>
       <button id="dr-next" title="Next (→)">→</button>
+      <button id="dr-gallery" title="Unselect — back to the gallery slideshow (Esc)">▦ gallery</button>
       <span class="spacer"></span>
-      <button id="dr-close" title="Close panel (Esc)">✕</button>
+      <button id="dr-close" title="Close panel">✕</button>
     </div>
     ${heroBlock(record, detail)}
     <div class="drawer-body">
@@ -159,11 +296,12 @@ function render(record, detail) {
   `;
 
   drawerEl.querySelector('#dr-close').addEventListener('click', closeDrawer);
+  drawerEl.querySelector('#dr-gallery').addEventListener('click', deselect);
   drawerEl.querySelector('#dr-prev').addEventListener('click', () => step(-1));
   drawerEl.querySelector('#dr-next').addEventListener('click', () => step(1));
   drawerEl.querySelectorAll('[data-tag]').forEach((el) =>
     el.addEventListener('click', () => {
-      closeDrawer();
+      deselect();
       import('../state.js').then((m) => m.toggleSetValue('tags', el.dataset.tag));
     }),
   );
