@@ -28,6 +28,17 @@ function panelChanged(id) {
   document.dispatchEvent(new CustomEvent('panel-changed', { detail: { id } }));
 }
 
+function slideChanged(id) {
+  // The map mirrors the gallery: it identifies the slide currently showing.
+  document.dispatchEvent(new CustomEvent('slide-changed', { detail: { id } }));
+}
+
+export function currentSlideId() {
+  if (getState().selected !== null) return null;
+  if (document.body.classList.contains('panel-closed')) return null;
+  return slideRecords[slideIdx]?.id ?? null;
+}
+
 export function initDrawer() {
   drawerEl = document.getElementById('drawer');
   lightboxEl = document.getElementById('lightbox');
@@ -136,6 +147,7 @@ function renderSlide() {
   if (next && next !== r) new Image().src = next.hi;
 
   if (focusedId) drawerEl.querySelector(`#${focusedId}`)?.focus();
+  slideChanged(r.id);
 }
 
 function renderPlaceholder() {
@@ -166,6 +178,7 @@ function renderPlaceholder() {
         <p>Then <kbd>←</kbd> <kbd>→</kbd> step through neighbouring records.</p>
       </div>`;
     drawerEl.querySelector('#dr-close').addEventListener('click', closeDrawer);
+    slideChanged(null);
     return;
   }
 
@@ -175,6 +188,7 @@ function renderPlaceholder() {
 
 export async function openDrawer(id, orderedRecords = null) {
   stopSlideshow();
+  slideChanged(null);
   if (orderedRecords) currentOrder = orderedRecords;
   const record = getById(id);
   if (!record) return;
@@ -209,8 +223,10 @@ export function deselect() {
   if (id === null) return;
   update({ selected: null }, { silent: true });
   resumeAtId = id;
-  renderPlaceholder();
+  // Selection cleanup first — renderPlaceholder announces the resumed slide,
+  // and the map identification for it must not be wiped right after.
   panelChanged(null);
+  renderPlaceholder();
 }
 
 function step(direction) {

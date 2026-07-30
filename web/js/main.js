@@ -105,6 +105,16 @@ async function boot() {
     else if (e.key === '?') document.getElementById('help-dialog').showModal();
   });
 
+  // Nav tabs switch views through state, like the 1/2/3 shortcuts — their raw
+  // hrefs would replace the whole hash and wipe filters + saved map position.
+  document.querySelectorAll('.views a').forEach((a) =>
+    a.addEventListener('click', (e) => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      update({ view: a.dataset.view });
+    }),
+  );
+
   document.getElementById('theme-toggle').addEventListener('click', () => {
     const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;

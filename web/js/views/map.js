@@ -1,7 +1,7 @@
 import { getState, update, toggleSetValue } from '../state.js';
 import { applyFilters, positionBucket } from '../data.js';
 import { esc, formatDate } from '../format.js';
-import { openDrawer } from './detail.js';
+import { openDrawer, currentSlideId } from './detail.js';
 
 // Leaflet is loaded globally (classic scripts in vendor/) — grab from window.
 const L = window.L;
@@ -10,6 +10,7 @@ let map = null;
 let exactLayer = null;
 let approxLayer = null;
 let radiusCircle = null;
+let slideMarker = null;
 let mapContainerId = 'leaflet-map';
 
 /** Deterministic jitter from the record id: same position every session. */
@@ -122,6 +123,13 @@ export function renderMap(container) {
       const record = applyFilters(getState()).find((r) => r.id === id);
       if (record) showRadius(record);
     });
+
+    // The gallery slideshow announces each slide — identify it on the map
+    // like a click would, panning to it but never touching the zoom level.
+    document.addEventListener('slide-changed', (e) => {
+      if (!map) return;
+      highlightSlide(e.detail?.id ?? null);
+    });
   }
 
   exactLayer.clearLayers();
@@ -161,7 +169,44 @@ export function renderMap(container) {
     openDrawer(state.selected, records);
   }
 
+  // Remounting mid-slideshow (view switch, filter change): re-identify the
+  // slide currently showing in the gallery.
+  highlightSlide(currentSlideId());
+
   setTimeout(() => map.invalidateSize(), 0);
+}
+
+function highlightSlide(id) {
+  if (slideMarker) {
+    map.removeLayer(slideMarker);
+    slideMarker = null;
+  }
+  if (!id) {
+    hideRadius();
+    return;
+  }
+  const record = applyFilters(getState()).find((r) => r.id === id);
+  if (!record || record.lat === undefined || record.lat === null || Math.abs(record.lat) > 90 || Math.abs(record.lon) > 180) {
+    hideRadius();
+    return;
+  }
+  // Ring the marker's displayed position (same jitter as the marker itself).
+  let lat = record.lat;
+  let lon = record.lon;
+  if (positionBucket(record) !== 'exact' && record.rk) {
+    const [dLat, dLon] = jitterFor(record.id, record.rk);
+    lat += dLat;
+    lon += dLon;
+  }
+  slideMarker = L.circleMarker([lat, lon], {
+    radius: 13,
+    weight: 3,
+    fill: false,
+    color: '#5d7a2e', // SVG attributes can't resolve CSS custom properties
+    className: 'slide-highlight',
+  }).addTo(map);
+  showRadius(record);
+  map.panTo([lat, lon]); // identify without changing zoom
 }
 
 function showRadius(record) {
@@ -193,5 +238,6 @@ export function teardownMap() {
     exactLayer = null;
     approxLayer = null;
     radiusCircle = null;
+    slideMarker = null;
   }
 }
