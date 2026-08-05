@@ -13,6 +13,18 @@ let radiusCircle = null;
 let slideMarker = null;
 let mapContainerId = 'leaflet-map';
 
+// Once the visitor manually pans/zooms, the idle slideshow stops recentering
+// the view out from under them — it still rings the current slide's marker,
+// just no longer steals the viewport. Reset when the map is torn down.
+let userHasInteracted = false;
+let suppressMoveTracking = false;
+
+function moveMapInternal(fn) {
+  suppressMoveTracking = true;
+  fn();
+  suppressMoveTracking = false;
+}
+
 /** Deterministic jitter from the record id: same position every session. */
 function jitterFor(id, radiusKm) {
   let h = 0;
@@ -105,6 +117,10 @@ export function renderMap(container) {
       update({ mapView: { lat: c.lat, lon: c.lng, zoom: map.getZoom() } }, { silent: true });
     });
 
+    map.on('movestart', () => {
+      if (!suppressMoveTracking) userHasInteracted = true;
+    });
+
     document.getElementById('toggle-approx')?.addEventListener('change', (e) => {
       if (e.target.checked) map.addLayer(approxLayer);
       else map.removeLayer(approxLayer);
@@ -156,12 +172,12 @@ export function renderMap(container) {
   // Viewport: honor the hash if present, else fit the filtered data.
   const saved = state.mapView;
   if (saved) {
-    map.setView([saved.lat, saved.lon], saved.zoom);
+    moveMapInternal(() => map.setView([saved.lat, saved.lon], saved.zoom));
   } else if (mappable.length > 0) {
     const bounds = L.latLngBounds(mappable.map((r) => [r.lat, r.lon]));
-    map.fitBounds(bounds.pad(0.1), { maxZoom: 10 });
+    moveMapInternal(() => map.fitBounds(bounds.pad(0.1), { maxZoom: 10 }));
   } else {
-    map.setView([51.4, -1.85], 8); // Wiltshire heartland default
+    moveMapInternal(() => map.setView([51.4, -1.85], 8)); // Wiltshire heartland default
   }
 
   // Deep-linked selection.
@@ -206,7 +222,9 @@ function highlightSlide(id) {
     className: 'slide-highlight',
   }).addTo(map);
   showRadius(record);
-  map.panTo([lat, lon]); // identify without changing zoom
+  // Identify without changing zoom — but once the visitor has taken the
+  // wheel themselves, stop recentering the view out from under them.
+  if (!userHasInteracted) moveMapInternal(() => map.panTo([lat, lon]));
 }
 
 function showRadius(record) {
@@ -239,5 +257,6 @@ export function teardownMap() {
     approxLayer = null;
     radiusCircle = null;
     slideMarker = null;
+    userHasInteracted = false;
   }
 }
