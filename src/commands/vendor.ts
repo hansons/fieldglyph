@@ -17,6 +17,10 @@ export function runVendor(): void {
       path.join(root, 'node_modules', 'leaflet.markercluster', 'dist'),
       path.join(vendorDir, 'markercluster'),
     ],
+    [
+      path.join(root, 'node_modules', 'leaflet.heat', 'dist'),
+      path.join(vendorDir, 'leaflet-heat'),
+    ],
   ];
 
   mkdirSync(vendorDir, { recursive: true });

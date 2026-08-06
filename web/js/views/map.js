@@ -2,16 +2,26 @@ import { getState, update, toggleSetValue } from '../state.js';
 import { applyFilters, positionBucket } from '../data.js';
 import { esc, formatDate } from '../format.js';
 import { openDrawer, currentSlideId } from './detail.js';
+import { createGridLayer } from './gridLayer.js';
 
 // Leaflet is loaded globally (classic scripts in vendor/) — grab from window.
 const L = window.L;
 
+const FORMATS = ['cluster', 'heat', 'grid'];
+
 let map = null;
 let exactLayer = null;
 let approxLayer = null;
+let heatLayer = null;
+let gridLayer = null;
 let radiusCircle = null;
 let slideMarker = null;
 let mapContainerId = 'leaflet-map';
+
+// Latest jittered points behind the marker layers — reused by heat/grid so
+// toggling format or the approx checkbox doesn't need a full data recompute.
+let lastExactPoints = [];
+let lastApproxPoints = [];
 
 // Once the visitor manually pans/zooms, the idle slideshow stops recentering
 // the view out from under them — it still rings the current slide's marker,
@@ -36,15 +46,21 @@ function jitterFor(id, radiusKm) {
   return [dLat, dLon];
 }
 
-function markerFor(record) {
-  const isExact = positionBucket(record) === 'exact';
+/** Displayed position: the true coordinate for exact records, jittered for approx. */
+function positionFor(record) {
   let lat = record.lat;
   let lon = record.lon;
-  if (!isExact && record.rk) {
+  if (positionBucket(record) !== 'exact' && record.rk) {
     const [dLat, dLon] = jitterFor(record.id, record.rk);
     lat += dLat;
     lon += dLon;
   }
+  return [lat, lon];
+}
+
+function markerFor(record) {
+  const isExact = positionBucket(record) === 'exact';
+  const [lat, lon] = positionFor(record);
   const icon = L.divIcon({
     className: isExact ? 'marker-exact' : 'marker-approx',
     iconSize: isExact ? [12, 12] : [14, 14],
@@ -78,6 +94,11 @@ export function renderMap(container) {
         <span><span class="legend-swatch legend-exact"></span> exact position</span>
         <span><span class="legend-swatch legend-approx"></span> region-level (scattered for display)</span>
         <label><input type="checkbox" id="toggle-approx" checked> show approximate</label>
+        <div class="map-format-switcher" role="group" aria-label="Map presentation">
+          <button type="button" class="chip" data-format="cluster">Clusters</button>
+          <button type="button" class="chip" data-format="heat">Heat map</button>
+          <button type="button" class="chip" data-format="grid">Grid</button>
+        </div>
       </div>
       <button class="map-tray" id="map-tray" title="Records without a mappable position"></button>
       <div class="tile-warning" id="tile-warning" hidden>Basemap unavailable — markers still shown</div>
@@ -109,8 +130,20 @@ export function renderMap(container) {
         });
       },
     });
-    map.addLayer(exactLayer);
-    map.addLayer(approxLayer);
+    heatLayer = L.heatLayer([], {
+      radius: 25,
+      blur: 18,
+      // Leaflet.heat fades each point's weight the further the current zoom
+      // sits below `maxZoom` — defaulting to the basemap's 18 (street level)
+      // makes the layer nearly invisible at this dataset's natural whole-
+      // world default view. 9 (country/continent scale) is where crop-circle
+      // density is actually meaningful, so calibrate the falloff to that.
+      maxZoom: 9,
+      gradient: { 0.3: '#e6ecd8', 0.55: '#a3c065', 0.8: '#5d7a2e', 1: '#3d5620' },
+    });
+    gridLayer = createGridLayer();
+    // Which of exact/approx/heat/grid is on the map is decided by applyFormat()
+    // below, driven by state.mapFormat — none of them get added here.
 
     map.on('moveend', () => {
       const c = map.getCenter();
@@ -121,9 +154,10 @@ export function renderMap(container) {
       if (!suppressMoveTracking) userHasInteracted = true;
     });
 
-    document.getElementById('toggle-approx')?.addEventListener('change', (e) => {
-      if (e.target.checked) map.addLayer(approxLayer);
-      else map.removeLayer(approxLayer);
+    document.getElementById('toggle-approx')?.addEventListener('change', applyFormat);
+
+    document.querySelectorAll('.map-format-switcher [data-format]').forEach((btn) => {
+      btn.addEventListener('click', () => update({ mapFormat: btn.dataset.format }));
     });
 
     // Panel opened/closed or selection changed: the map width shifts and the
@@ -152,13 +186,26 @@ export function renderMap(container) {
   approxLayer.clearLayers();
   const exactMarkers = [];
   const approxMarkers = [];
+  lastExactPoints = [];
+  lastApproxPoints = [];
   for (const r of mappable) {
     const m = markerFor(r);
-    if (positionBucket(r) === 'exact') exactMarkers.push(m);
-    else approxMarkers.push(m);
+    const pos = m.getLatLng();
+    if (positionBucket(r) === 'exact') {
+      exactMarkers.push(m);
+      lastExactPoints.push([pos.lat, pos.lng]);
+    } else {
+      approxMarkers.push(m);
+      lastApproxPoints.push([pos.lat, pos.lng]);
+    }
   }
   exactLayer.addLayers(exactMarkers);
   approxLayer.addLayers(approxMarkers);
+
+  document.querySelectorAll('.map-format-switcher [data-format]').forEach((btn) => {
+    btn.setAttribute('aria-pressed', String(btn.dataset.format === state.mapFormat));
+  });
+  applyFormat();
 
   const tray = document.getElementById('map-tray');
   if (tray) {
@@ -192,6 +239,36 @@ export function renderMap(container) {
   setTimeout(() => map.invalidateSize(), 0);
 }
 
+/** Shows exactly the layer(s) for the active presentation format; heat/grid
+ *  fold exact+approx into one point set instead of the marker layers' split. */
+function applyFormat() {
+  const format = FORMATS.includes(getState().mapFormat) ? getState().mapFormat : 'cluster';
+  const showApprox = document.getElementById('toggle-approx')?.checked ?? true;
+
+  const wanted =
+    format === 'cluster'
+      ? [exactLayer, ...(showApprox ? [approxLayer] : [])]
+      : format === 'heat'
+        ? [heatLayer]
+        : [gridLayer];
+
+  // Only touch layers whose membership is actually changing — Leaflet drops
+  // a layer's internal map reference on removeLayer, so removing and
+  // immediately re-adding the still-active layer (e.g. on every filter
+  // change while parked on Heat map) would hand it a stale reference.
+  for (const layer of [exactLayer, approxLayer, heatLayer, gridLayer]) {
+    if (!wanted.includes(layer) && map.hasLayer(layer)) map.removeLayer(layer);
+  }
+  for (const layer of wanted) {
+    if (!map.hasLayer(layer)) map.addLayer(layer);
+  }
+
+  if (format === 'cluster') return;
+  const points = showApprox ? lastExactPoints.concat(lastApproxPoints) : lastExactPoints;
+  if (format === 'heat') heatLayer.setLatLngs(points);
+  else gridLayer.setPoints(points);
+}
+
 function highlightSlide(id) {
   if (slideMarker) {
     map.removeLayer(slideMarker);
@@ -207,13 +284,7 @@ function highlightSlide(id) {
     return;
   }
   // Ring the marker's displayed position (same jitter as the marker itself).
-  let lat = record.lat;
-  let lon = record.lon;
-  if (positionBucket(record) !== 'exact' && record.rk) {
-    const [dLat, dLon] = jitterFor(record.id, record.rk);
-    lat += dLat;
-    lon += dLon;
-  }
+  const [lat, lon] = positionFor(record);
   slideMarker = L.circleMarker([lat, lon], {
     radius: 13,
     weight: 3,
@@ -255,6 +326,8 @@ export function teardownMap() {
     map = null;
     exactLayer = null;
     approxLayer = null;
+    heatLayer = null;
+    gridLayer = null;
     radiusCircle = null;
     slideMarker = null;
     userHasInteracted = false;

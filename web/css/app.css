@@ -218,6 +218,7 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
 .legend-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
 .legend-exact { background: var(--exact); }
 .legend-approx { border: 2px dashed var(--approx); background: transparent; }
+.map-format-switcher { display: flex; gap: 5px; padding-top: 2px; border-top: 1px solid var(--border); margin-top: 2px; }
 
 .map-tray {
   position: absolute;
