@@ -14,6 +14,7 @@ const DEFAULTS = () => ({
   selected: null, // formation id
   mapView: null, // { lat, lon, zoom }
   mapFormat: 'cluster', // 'cluster' | 'heat' | 'grid'
+  mapBasemap: 'street', // 'street' | 'satellite'
 });
 
 let state = DEFAULTS();
@@ -46,7 +47,7 @@ export function toggleSetValue(key, value) {
 }
 
 export function clearFilters() {
-  const keep = { view: state.view, mapView: state.mapView, mapFormat: state.mapFormat };
+  const keep = { view: state.view, mapView: state.mapView, mapFormat: state.mapFormat, mapBasemap: state.mapBasemap };
   state = { ...DEFAULTS(), ...keep };
   writeHash();
   emit();
@@ -98,6 +99,7 @@ function writeHash() {
     params.set('c', `${state.mapView.lat.toFixed(4)},${state.mapView.lon.toFixed(4)},${state.mapView.zoom}`);
   }
   if (state.mapFormat !== 'cluster') params.set('fmt', state.mapFormat);
+  if (state.mapBasemap !== 'street') params.set('bm', state.mapBasemap);
   const qs = params.toString();
   const hash = `#/${state.view}${qs ? '?' + qs : ''}`;
   if (location.hash !== hash) {
@@ -144,6 +146,8 @@ export function readHash() {
   }
   const fmt = params.get('fmt');
   if (fmt === 'heat' || fmt === 'grid') next.mapFormat = fmt;
+  const bm = params.get('bm');
+  if (bm === 'satellite') next.mapBasemap = bm;
 
   state = next;
   emit();

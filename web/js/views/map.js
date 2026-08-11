@@ -10,6 +10,8 @@ const L = window.L;
 const FORMATS = ['cluster', 'heat', 'grid'];
 
 let map = null;
+let streetLayer = null;
+let satelliteLayer = null;
 let exactLayer = null;
 let approxLayer = null;
 let heatLayer = null;
@@ -99,6 +101,10 @@ export function renderMap(container) {
           <button type="button" class="chip" data-format="heat">Heat map</button>
           <button type="button" class="chip" data-format="grid">Grid</button>
         </div>
+        <div class="map-format-switcher" role="group" aria-label="Map basemap">
+          <button type="button" class="chip" data-basemap="street">Street</button>
+          <button type="button" class="chip" data-basemap="satellite">Satellite</button>
+        </div>
       </div>
       <button class="map-tray" id="map-tray" title="Records without a mappable position"></button>
       <div class="tile-warning" id="tile-warning" hidden>Basemap unavailable — markers still shown</div>
@@ -108,14 +114,21 @@ export function renderMap(container) {
 
   if (!map) {
     map = L.map(mapContainerId, { worldCopyJump: true });
-    const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    streetLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     });
-    tiles.on('tileerror', () => {
-      document.getElementById('tile-warning')?.removeAttribute('hidden');
-    });
-    tiles.addTo(map);
+    satelliteLayer = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+      },
+    );
+    const onTileError = () => document.getElementById('tile-warning')?.removeAttribute('hidden');
+    streetLayer.on('tileerror', onTileError);
+    satelliteLayer.on('tileerror', onTileError);
+    (getState().mapBasemap === 'satellite' ? satelliteLayer : streetLayer).addTo(map);
 
     exactLayer = L.markerClusterGroup({ maxClusterRadius: 46 });
     approxLayer = L.markerClusterGroup({
@@ -158,6 +171,10 @@ export function renderMap(container) {
 
     document.querySelectorAll('.map-format-switcher [data-format]').forEach((btn) => {
       btn.addEventListener('click', () => update({ mapFormat: btn.dataset.format }));
+    });
+
+    document.querySelectorAll('[data-basemap]').forEach((btn) => {
+      btn.addEventListener('click', () => update({ mapBasemap: btn.dataset.basemap }));
     });
 
     // Panel opened/closed or selection changed: the map width shifts and the
@@ -207,6 +224,11 @@ export function renderMap(container) {
   });
   applyFormat();
 
+  document.querySelectorAll('[data-basemap]').forEach((btn) => {
+    btn.setAttribute('aria-pressed', String(btn.dataset.basemap === state.mapBasemap));
+  });
+  applyBasemap(state.mapBasemap);
+
   const tray = document.getElementById('map-tray');
   if (tray) {
     tray.textContent = `⊘ ${unmappable} not mappable`;
@@ -237,6 +259,14 @@ export function renderMap(container) {
   highlightSlide(currentSlideId());
 
   setTimeout(() => map.invalidateSize(), 0);
+}
+
+/** Swaps the basemap tile layer without touching the marker/heat/grid layers above it. */
+function applyBasemap(basemap) {
+  const wanted = basemap === 'satellite' ? satelliteLayer : streetLayer;
+  const other = wanted === satelliteLayer ? streetLayer : satelliteLayer;
+  if (map.hasLayer(other)) map.removeLayer(other);
+  if (!map.hasLayer(wanted)) map.addLayer(wanted);
 }
 
 /** Shows exactly the layer(s) for the active presentation format; heat/grid
@@ -324,6 +354,8 @@ export function teardownMap() {
   if (map) {
     map.remove();
     map = null;
+    streetLayer = null;
+    satelliteLayer = null;
     exactLayer = null;
     approxLayer = null;
     heatLayer = null;
