@@ -7,7 +7,7 @@ import { renderMap, teardownMap } from './views/map.js';
 import { renderEvolution } from './views/evolution.js';
 import { renderAbout } from './views/about.js';
 import { renderReview, reviewKeydown } from './views/review.js';
-import { initDrawer, openDrawer } from './views/detail.js';
+import { initDrawer, openDrawer, deselect } from './views/detail.js';
 
 const viewRoot = document.getElementById('view-root');
 let lastView = null;
@@ -114,6 +114,14 @@ async function boot() {
       update({ view: a.dataset.view });
     }),
   );
+
+  // Brand click: back to the map, zoomed out, from anywhere — filters stay put.
+  // deselect() must run first: it repaints the drawer itself (a plain state
+  // update doesn't) and clears `selected` before renderMap() can reopen it.
+  document.getElementById('brand-reset').addEventListener('click', () => {
+    deselect();
+    update({ view: 'map', mapView: null });
+  });
 
   document.getElementById('theme-toggle').addEventListener('click', () => {
     const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';

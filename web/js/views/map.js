@@ -65,7 +65,7 @@ function markerFor(record) {
   const [lat, lon] = positionFor(record);
   const icon = L.divIcon({
     className: isExact ? 'marker-exact' : 'marker-approx',
-    iconSize: isExact ? [12, 12] : [14, 14],
+    iconSize: isExact ? [18, 18] : [20, 20],
   });
   const marker = L.marker([lat, lon], {
     icon,
