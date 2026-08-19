@@ -6,6 +6,7 @@ import { renderList } from './views/list.js';
 import { renderMap, teardownMap } from './views/map.js';
 import { renderEvolution } from './views/evolution.js';
 import { renderAbout } from './views/about.js';
+import { renderSupport } from './views/support.js';
 import { renderReview, reviewKeydown } from './views/review.js';
 import { initDrawer, openDrawer, deselect } from './views/detail.js';
 
@@ -41,6 +42,9 @@ function renderView() {
       break;
     case 'about':
       renderAbout(viewRoot);
+      break;
+    case 'support':
+      renderSupport(viewRoot);
       break;
     default:
       renderMap(viewRoot);
