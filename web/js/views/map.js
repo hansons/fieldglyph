@@ -122,11 +122,10 @@ export function renderMap(container) {
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       {
         // Esri's real coverage ceiling varies by region and is well short of the
-        // service's nominal z19 in rural/remote areas (verified empirically for
-        // Nazca: z17 real, z18+ returns a placeholder tile reading "Map data not
-        // yet available"). 17 is a conservative floor that stays real for both
-        // this app's use cases (rural UK crop-circle fields, Peru desert AOIs);
-        // maxZoom lets Leaflet stretch that last real tile further instead.
+        // service's nominal z19 in rural/remote areas (verified empirically:
+        // z17 real, z18+ returns a placeholder tile reading "Map data not yet
+        // available" over rural UK crop-circle fields). 17 is a conservative
+        // floor; maxZoom lets Leaflet stretch that last real tile further instead.
         maxNativeZoom: 17,
         maxZoom: 22,
         attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
