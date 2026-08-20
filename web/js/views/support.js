@@ -84,10 +84,7 @@ export function renderSupport(container) {
       resembles each formation, instead of a generic dot.
       <strong>${symbolizable.toLocaleString()}</strong> formations currently have a usable photo or
       diagram to work from (the rest — mostly from sources not fully harvested yet — don't have an
-      image yet, so they're excluded from this goal until they do). It costs roughly 2 cents per
-      formation, so covering all of them comes to about $${Math.round(baseCost)} — this goal adds a
-      20% buffer on top for the occasional retry or unusually complex formation.</p>
-      <p class="support-goal-amount">$${symbolGoal} — replaces every plain circle on the map with a real glyph</p>
+      image yet, so they're excluded from this goal until they do).</p>
       <a class="support-cta" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">Fund the glyphs ↗</a>
     </div>
 
