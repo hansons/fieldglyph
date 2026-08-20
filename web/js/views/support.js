@@ -10,6 +10,11 @@ const KOFI_URL = 'https://ko-fi.com/hansorun';
 const SYMBOL_COST_PER_FORMATION_USD = 0.02;
 const SYMBOL_COST_BUFFER = 1.2;
 
+// The actual number set on the Ko-fi goal bar (ko-fi.com/hansorun/goal) — rounded up from
+// the computed combined total below to a clean number. Keep this in sync by hand if the
+// Ko-fi goal is ever changed.
+const KOFI_GOAL_USD = 500;
+
 function roundUpTo(n, step) {
   return Math.ceil(n / step) * step;
 }
@@ -110,10 +115,11 @@ export function renderSupport(container) {
     — the archive stays free and open either way. This just funds what gets built next.</p>
     <a class="support-cta support-cta-secondary" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">Support on Ko-fi ↗</a>
     <p class="filter-hint">This page doesn't show a live donation total — a static site has no
-    honest way to track one. The Ko-fi page's own goal bar is set to <strong>$${combinedGoal}</strong>,
-    the combined total of every goal above — Ko-fi only supports one active goal at a time, so
-    that single bar tracks progress toward all of them together rather than one each. That figure
-    is computed here, not on Ko-fi, so if the archive grows enough to move the glyph-pipeline
-    number, this total may drift a little ahead of whatever's actually configured there.</p>
+    honest way to track one. The Ko-fi page's own goal bar is set to <strong>$${KOFI_GOAL_USD}</strong>,
+    a round number just above the $${combinedGoal} combined total of every goal above (computed
+    here, not on Ko-fi) — Ko-fi only supports one active goal at a time, so that single bar tracks
+    progress toward all of them together rather than one each. That computed total grows a little
+    as the archive does (more formations means a bigger glyph-pipeline goal), so it may drift
+    closer to — or past — the Ko-fi number over time.</p>
   </div></div>`;
 }
