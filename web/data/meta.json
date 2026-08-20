@@ -1,11 +1,12 @@
 {
-  "generated": "2026-07-30T00:37:16.620Z",
+  "generated": "2026-08-20T16:07:17.309Z",
   "totals": {
-    "records": 2686,
+    "records": 2698,
     "media": 15759,
-    "geocoded": 2162,
-    "tagged": 617,
-    "withText": 801,
+    "geocoded": 2174,
+    "tagged": 629,
+    "withText": 813,
+    "symbolizable": 2211,
     "symbols": {}
   },
   "sources": [
@@ -67,6 +68,18 @@
       "geocoded": 7,
       "described": 7,
       "wayback": 7,
+      "media": 0
+    },
+    {
+      "key": "nazca-reference",
+      "name": "Nazca Lines (reference geoglyphs)",
+      "status": "active",
+      "baseUrl": "https://www.wikidata.org/wiki/Q2620036",
+      "notes": "Hand-curated reference data, not a scraped site: known Nazca Lines geoglyphs (ancient, UNESCO-listed) included for visual/spatial comparison against Peru survey candidates. Coordinates sourced from individual Wikidata items linked from the Nazca Lines item above.",
+      "records": 12,
+      "geocoded": 12,
+      "described": 12,
+      "wayback": 0,
       "media": 0
     }
   ],

@@ -227,6 +227,7 @@ export function buildExport(repo: Repository, regionRadius: RegionRadiusLookup):
       geocoded: records.filter((r) => r.lat !== undefined).length,
       tagged: records.filter((r) => r.tg && r.tg.length > 0).length,
       withText: records.filter((r) => r.tg !== undefined).length,
+      symbolizable: records.filter((r) => r.hi && r.src !== 'ircup' && r.sy !== 1).length,
       symbols: symbolCounts,
     },
     sources,
