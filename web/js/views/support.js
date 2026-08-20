@@ -6,7 +6,7 @@ const KOFI_URL = 'https://ko-fi.com/hansorun';
 const ALSO_FUNDS = [
   {
     title: 'A real domain',
-    body: 'About $15/year buys worldglyph.org instead of a *.pages.dev address — cheap, but it’s the first thing that makes this look like a project instead of a demo.',
+    body: 'About $15/year buys fieldglyph.org instead of a *.pages.dev address — cheap, but it’s the first thing that makes this look like a project instead of a demo.',
   },
   {
     title: 'Continued development',
@@ -38,8 +38,8 @@ export function renderSupport(container) {
   ).join('');
 
   container.innerHTML = `<div class="view"><div class="support">
-    <h2>Support Worldglyph</h2>
-    <p>Worldglyph is one person's evenings and weekends, rebuilding a public record that
+    <h2>Support Fieldglyph</h2>
+    <p>Fieldglyph is one person's evenings and weekends, rebuilding a public record that
     dying and abandoned crop-circle sites were about to take with them. It runs on
     hosting-costs-only economics — no ads, no login wall, no subscription. If you'd like
     it to grow faster than that, here's exactly what money buys.</p>
@@ -61,12 +61,12 @@ export function renderSupport(container) {
     <div class="support-grid">${cards}</div>
 
     <h2>How this works</h2>
-    <p>Worldglyph is a fully static site with no backend in production, so there's no checkout
+    <p>Fieldglyph is a fully static site with no backend in production, so there's no checkout
     built into this page and nothing here ever touches your card details. The button below goes to
     <strong>Ko-fi</strong>: it takes one-time or recurring support, keeps 0% of one-time donations
     (Ko-fi's own payment processor still takes its standard cut), and doesn't require registering a
     business to use.</p>
-    <p>Nothing on Worldglyph is paywalled and donating doesn't unlock anything for you specifically
+    <p>Nothing on Fieldglyph is paywalled and donating doesn't unlock anything for you specifically
     — the archive stays free and open either way. This just funds what gets built next.</p>
     <a class="support-cta support-cta-secondary" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">Support on Ko-fi ↗</a>
     <p class="filter-hint">This page doesn't show a live donation total — a static site has no
