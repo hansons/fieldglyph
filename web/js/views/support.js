@@ -54,6 +54,7 @@ export function renderSupport(container) {
   const symbolizable = meta.totals.symbolizable ?? records;
   const baseCost = symbolizable * SYMBOL_COST_PER_FORMATION_USD;
   const symbolGoal = roundUpTo(baseCost * SYMBOL_COST_BUFFER, 5);
+  const combinedGoal = symbolGoal + FUNDING_GOALS.reduce((sum, g) => sum + g.amount, 0);
 
   const goalCards = FUNDING_GOALS.map(
     (g) => `<div class="support-card">
@@ -109,7 +110,10 @@ export function renderSupport(container) {
     — the archive stays free and open either way. This just funds what gets built next.</p>
     <a class="support-cta support-cta-secondary" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">Support on Ko-fi ↗</a>
     <p class="filter-hint">This page doesn't show a live donation total — a static site has no
-    honest way to track one. Once there's a Ko-fi goal set up, its own progress bar can be linked
-    from here instead of faked here.</p>
+    honest way to track one. The Ko-fi page's own goal bar is set to <strong>$${combinedGoal}</strong>,
+    the combined total of every goal above — Ko-fi only supports one active goal at a time, so
+    that single bar tracks progress toward all of them together rather than one each. That figure
+    is computed here, not on Ko-fi, so if the archive grows enough to move the glyph-pipeline
+    number, this total may drift a little ahead of whatever's actually configured there.</p>
   </div></div>`;
 }
