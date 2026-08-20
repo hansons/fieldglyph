@@ -107,10 +107,7 @@ export function renderSupport(container) {
 
     <h2>How this works</h2>
     <p>Fieldglyph is a fully static site with no backend in production, so there's no checkout
-    built into this page and nothing here ever touches your card details. The button below goes to
-    <strong>Ko-fi</strong>: it takes one-time or recurring support, keeps 0% of one-time donations
-    (Ko-fi's own payment processor still takes its standard cut), and doesn't require registering a
-    business to use.</p>
+    built into this page and nothing here ever touches your card details.</p>
     <p>Nothing on Fieldglyph is paywalled and donating doesn't unlock anything for you specifically
     — the archive stays free and open either way. This just funds what gets built next.</p>
     <a class="support-cta support-cta-secondary" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">Support on Ko-fi ↗</a>

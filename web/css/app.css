@@ -464,6 +464,7 @@ details.data-notes li { color: var(--text-dim); }
 .support-cta:hover { opacity: 0.9; }
 :root[data-theme='dark'] .support-cta { color: #14150f; }
 .support-cta-secondary { background: var(--bg-raised); color: var(--text); border: 1px solid var(--border); margin: 6px 0 10px; }
+:root[data-theme='dark'] .support-cta-secondary { color: var(--text); }
 .support-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 8px; }
 .support-card {
   background: var(--bg-raised);
