@@ -80,17 +80,15 @@ export function renderSupport(container) {
     <div class="support-featured">
       <h3>Give every formation its own glyph</h3>
       <p>Right now all <strong>${records.toLocaleString()} formations</strong> in the archive show up on the
-      map as the same plain circle. There's already a pipeline for something better — feed a
-      formation's photo to Claude's vision model, get back a geometric spec, render it as a small
-      SVG glyph that actually resembles the formation instead of a generic dot. It works today (see
-      the Review tab) — it just hasn't been run across the archive yet.
+      map as the same plain circle. This goal replaces that with a small glyph that actually
+      resembles each formation, instead of a generic dot.
       <strong>${symbolizable.toLocaleString()}</strong> formations currently have a usable photo or
-      diagram to convert (the rest — mostly from sources not fully harvested yet — don't have an
-      image to feed the model, so they're excluded from this goal until they do). At roughly 2
-      cents a formation in API costs, that's about $${Math.round(baseCost)} — this goal adds a 20%
-      buffer on top for refused/retried images and unusually complex formations.</p>
+      diagram to work from (the rest — mostly from sources not fully harvested yet — don't have an
+      image yet, so they're excluded from this goal until they do). It costs roughly 2 cents per
+      formation, so covering all of them comes to about $${Math.round(baseCost)} — this goal adds a
+      20% buffer on top for the occasional retry or unusually complex formation.</p>
       <p class="support-goal-amount">$${symbolGoal} — replaces every plain circle on the map with a real glyph</p>
-      <a class="support-cta" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">Fund the symbol pipeline ↗</a>
+      <a class="support-cta" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">Fund the glyphs ↗</a>
     </div>
 
     <h2>Other funding goals</h2>
