@@ -291,6 +291,27 @@ export class Repository {
     this.db.prepare(`UPDATE formation_media SET ${sets} WHERE id=@id`).run({ ...patch, id });
   }
 
+  listMediaForArchive(limit?: number): Array<{ id: number; url: string; sourceKey: string }> {
+    const sql = `
+      SELECT m.id, m.url, s.key AS sourceKey
+      FROM formation_media m
+      JOIN formation_reports f ON f.id = m.formation_report_id
+      JOIN sources s ON s.id = f.source_id
+      WHERE m.local_archive_path IS NULL
+      ORDER BY m.id
+      ${limit ? 'LIMIT @limit' : ''}
+    `;
+    return this.db.prepare(sql).all(limit ? { limit } : {}) as ReturnType<
+      Repository['listMediaForArchive']
+    >;
+  }
+
+  applyMediaArchive(id: number, relativePath: string): void {
+    this.db
+      .prepare('UPDATE formation_media SET local_archive_path=@path, archived_at=@at WHERE id=@id')
+      .run({ path: relativePath, at: new Date().toISOString(), id });
+  }
+
   listFormationsForExport(): Array<Record<string, unknown>> {
     return this.db
       .prepare(

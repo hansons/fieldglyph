@@ -8,6 +8,7 @@ import { runExport } from './commands/export.ts';
 import { runVendor } from './commands/vendor.ts';
 import { runServe } from './commands/serve.ts';
 import { runSymbolize } from './commands/symbolize.ts';
+import { runArchiveMedia } from './commands/archiveMedia.ts';
 
 const program = new Command();
 program.name('crop-circle-archive').description('Web scrape recovery platform for crop circle formations');
@@ -73,6 +74,17 @@ program
   .option('--model <id>', 'Claude model id', 'claude-opus-5')
   .action(async (options: { limit?: number; model?: string }) => {
     await runSymbolize(options);
+  });
+
+program
+  .command('archive-media')
+  .description(
+    'Download formation photos into a private, local-only preservation cache (data/media/) as WebP — ' +
+      'never exported or served, purely disaster recovery if a source site disappears',
+  )
+  .option('--limit <n>', 'media files to archive this run', (v) => Number(v))
+  .action(async (options: { limit?: number }) => {
+    await runArchiveMedia({ limit: options.limit });
   });
 
 program
