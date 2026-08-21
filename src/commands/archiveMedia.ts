@@ -17,8 +17,16 @@ export async function runArchiveMedia(opts: { limit?: number } = {}): Promise<vo
 
   const caches = new Map<string, MediaCache>();
   const stats = { archived: 0, alreadyCached: 0, robotsDisallowed: 0, failed: 0 };
+  const progressEvery = 200;
 
-  for (const row of rows) {
+  for (const [i, row] of rows.entries()) {
+    if (i > 0 && i % progressEvery === 0) {
+      logger.info(
+        `Progress: ${i}/${rows.length} processed — ${stats.archived} archived, ` +
+          `${stats.alreadyCached} recovered, ${stats.robotsDisallowed} robots-disallowed, ${stats.failed} failed`,
+      );
+    }
+
     let cache = caches.get(row.sourceKey);
     if (!cache) {
       cache = new MediaCache(row.sourceKey);
