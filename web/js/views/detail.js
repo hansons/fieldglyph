@@ -24,6 +24,11 @@ let slidePaused = false;
 let slideSignature = null;
 let resumeAtId = null; // unselecting a record resumes the gallery on it
 
+// Record ids currently inside the map viewport, or null when that's not a
+// meaningful restriction (off the map view, or the map hasn't been manually
+// navigated yet) — see map.js's announceVisibleRecords().
+let visibleIds = null;
+
 function panelChanged(id) {
   // Let the map react (radius circle, resize) without importing map code here.
   document.dispatchEvent(new CustomEvent('panel-changed', { detail: { id } }));
@@ -53,6 +58,14 @@ export function initDrawer() {
     const filtered = applyFilters(getState());
     const sig = `${filtered.length}:${filtered[0]?.id ?? ''}:${filtered[filtered.length - 1]?.id ?? ''}`;
     if (sig !== slideSignature) renderPlaceholder();
+  });
+
+  // Map viewport changed → rebuild the slideshow over what's now in view.
+  document.addEventListener('map-bounds-changed', (e) => {
+    visibleIds = e.detail?.ids ?? null;
+    if (getState().selected !== null) return;
+    if (document.body.classList.contains('panel-closed')) return;
+    renderPlaceholder();
   });
 
   document.addEventListener('keydown', (e) => {
@@ -119,8 +132,8 @@ function renderSlide() {
       <h2>${esc(r.t ?? '(untitled formation)')}</h2>
       <div class="drawer-sub">${formatDate(r.d, r.dp)}</div>
       <div class="drawer-sub">${esc(place)}</div>
-      <p class="ss-hint">Slideshow of the ${slideRecords.length} formations with imagery in the
-        current view — click the photo to open the full record.</p>
+      <p class="ss-hint">Slideshow of the ${slideRecords.length} formations with imagery${visibleIds ? ' in the current map view' : ' matching the current filters'} —
+        click the photo to open the full record.</p>
     </div>`;
 
   drawerEl.querySelector('#dr-close').addEventListener('click', closeDrawer);
@@ -155,10 +168,11 @@ function renderPlaceholder() {
   stopSlideshow();
   const state = getState();
   const filtered = applyFilters(state);
+  const inView = visibleIds ? filtered.filter((r) => visibleIds.has(r.id)) : filtered;
   // Newest first, undated last — mirrors the list view's default order.
-  currentOrder = [...filtered].sort((a, b) => (b.d ?? '').localeCompare(a.d ?? ''));
+  currentOrder = [...inView].sort((a, b) => (b.d ?? '').localeCompare(a.d ?? ''));
   slideRecords = currentOrder.filter((r) => r.hi && r.src !== 'ircup');
-  slideSignature = `${filtered.length}:${filtered[0]?.id ?? ''}:${filtered[filtered.length - 1]?.id ?? ''}`;
+  slideSignature = `${filtered.length}:${visibleIds ? visibleIds.size : -1}:${slideRecords[0]?.id ?? ''}:${slideRecords[slideRecords.length - 1]?.id ?? ''}`;
   if (resumeAtId) {
     const i = slideRecords.findIndex((r) => r.id === resumeAtId);
     if (i >= 0) slideIdx = i;
@@ -167,6 +181,12 @@ function renderPlaceholder() {
   if (slideIdx >= slideRecords.length) slideIdx = 0;
 
   if (document.body.classList.contains('panel-closed') || slideRecords.length === 0) {
+    const emptyReason =
+      slideRecords.length === 0 && filtered.length > 0
+        ? inView.length === 0
+          ? 'Nothing matches the current filters within this map view — pan or zoom out to widen it. '
+          : 'No preserved imagery in the current view. '
+        : '';
     drawerEl.innerHTML = `
       <div class="drawer-nav">
         <span class="spacer"></span>
@@ -174,8 +194,7 @@ function renderPlaceholder() {
       </div>
       <div class="drawer-placeholder">
         <div class="glyph">◎</div>
-        <p>${slideRecords.length === 0 && filtered.length > 0 ? 'No preserved imagery in the current view.' : ''}
-          Click a formation — on the map or in the list — and its details appear here.</p>
+        <p>${emptyReason}Click a formation — on the map or in the list — and its details appear here.</p>
         <p>Then <kbd>←</kbd> <kbd>→</kbd> step through neighbouring records.</p>
       </div>`;
     drawerEl.querySelector('#dr-close').addEventListener('click', closeDrawer);

@@ -1,5 +1,5 @@
 import { getState, update, toggleSetValue } from '../state.js';
-import { applyFilters, positionBucket } from '../data.js';
+import { applyFilters, getFormations, positionBucket } from '../data.js';
 import { esc, formatDate } from '../format.js';
 import { openDrawer, currentSlideId } from './detail.js';
 import { createGridLayer } from './gridLayer.js';
@@ -28,13 +28,78 @@ let lastApproxPoints = [];
 // Once the visitor manually pans/zooms, the idle slideshow stops recentering
 // the view out from under them — it still rings the current slide's marker,
 // just no longer steals the viewport. Reset when the map is torn down.
+//
+// That same flag also gates the gallery's viewport restriction (below): while
+// the app is still auto-fitting/auto-panning, "current view" isn't a
+// deliberate window yet, so the gallery stays unrestricted. Restricting it
+// before that point would also fight the slideshow's own auto-pan — each
+// slide change would narrow the "visible" set, which could exclude the very
+// slide that just centered the map.
 let userHasInteracted = false;
-let suppressMoveTracking = false;
+// A depth counter, not a boolean: Leaflet's animated zoom fires a *second*,
+// asynchronous 'movestart' on the next frame as the CSS transition actually
+// begins, well after a programmatic setView() call has returned — resetting
+// a plain boolean synchronously right after fn() would leave that later
+// movestart looking user-driven. Held true for the whole move, released on
+// its moveend (with a timeout fallback for a no-op setView, which never
+// fires one at all).
+let suppressDepth = 0;
 
 function moveMapInternal(fn) {
-  suppressMoveTracking = true;
+  suppressDepth++;
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    suppressDepth = Math.max(0, suppressDepth - 1);
+  };
+  map.once('moveend', release);
   fn();
-  suppressMoveTracking = false;
+  setTimeout(release, 400); // covers Leaflet's ~250ms animated pan/zoom transition
+}
+
+// All records with a plottable position, regardless of the active filters —
+// computed once since the underlying dataset never changes at runtime.
+let cachedAllMappable = null;
+function allMappableRecords() {
+  if (!cachedAllMappable) {
+    cachedAllMappable = getFormations().filter(
+      (r) => r.lat !== undefined && r.lat !== null && Math.abs(r.lat) <= 90 && Math.abs(r.lon) <= 180,
+    );
+  }
+  return cachedAllMappable;
+}
+
+// Was the last announcement "unrestricted" (null)? Guards a feedback loop:
+// while idling and unrestricted, the slideshow auto-pans to each new slide
+// (see highlightSlide's panTo below), which fires its own moveend — without
+// this check that would re-announce, rebuild the gallery, land on the same
+// slide, dispatch 'slide-changed' again, and pan again, forever. Once
+// interacted, highlightSlide never calls panTo, so that loop can't recur —
+// only the idle (null) case needs deduping.
+let lastAnnouncedWasNull = true;
+
+/**
+ * Tells the gallery which record ids currently fall inside the map viewport,
+ * independent of the active filters — the gallery intersects this with its
+ * own filtered set, so this only needs to change when the viewport itself
+ * does. `ids: null` means "no restriction" (not on the map, or the visitor
+ * hasn't taken the wheel yet).
+ */
+function announceVisibleRecords() {
+  if (!map || !userHasInteracted) {
+    if (lastAnnouncedWasNull) return;
+    lastAnnouncedWasNull = true;
+    document.dispatchEvent(new CustomEvent('map-bounds-changed', { detail: { ids: null } }));
+    return;
+  }
+  lastAnnouncedWasNull = false;
+  const bounds = map.getBounds();
+  const ids = new Set();
+  for (const r of allMappableRecords()) {
+    if (bounds.contains(positionFor(r))) ids.add(r.id);
+  }
+  document.dispatchEvent(new CustomEvent('map-bounds-changed', { detail: { ids } }));
 }
 
 /** Deterministic jitter from the record id: same position every session. */
@@ -167,10 +232,11 @@ export function renderMap(container) {
     map.on('moveend', () => {
       const c = map.getCenter();
       update({ mapView: { lat: c.lat, lon: c.lng, zoom: map.getZoom() } }, { silent: true });
+      announceVisibleRecords();
     });
 
     map.on('movestart', () => {
-      if (!suppressMoveTracking) userHasInteracted = true;
+      if (suppressDepth === 0) userHasInteracted = true;
     });
 
     document.getElementById('toggle-approx')?.addEventListener('change', applyFormat);
@@ -369,5 +435,8 @@ export function teardownMap() {
     radiusCircle = null;
     slideMarker = null;
     userHasInteracted = false;
+    // Leaving the map view: "current view window" no longer means anything,
+    // so the gallery drops back to filter-only.
+    announceVisibleRecords();
   }
 }
