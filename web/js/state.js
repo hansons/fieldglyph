@@ -10,6 +10,7 @@ const DEFAULTS = () => ({
   countries: new Set(),
   verification: new Set(),
   position: new Set(), // 'exact' | 'approx' | 'none'
+  media: new Set(), // 'has' | 'none'
   query: '',
   selected: null, // formation id
   mapView: null, // { lat, lon, zoom }
@@ -62,6 +63,7 @@ export function hasActiveFilters() {
     state.countries.size > 0 ||
     state.verification.size > 0 ||
     state.position.size > 0 ||
+    state.media.size > 0 ||
     state.query !== ''
   );
 }
@@ -93,6 +95,7 @@ function writeHash() {
   if (state.countries.size) params.set('co', encodeSet(state.countries));
   if (state.verification.size) params.set('vs', encodeSet(state.verification));
   if (state.position.size) params.set('cs', encodeSet(state.position));
+  if (state.media.size) params.set('ph', encodeSet(state.media));
   if (state.query) params.set('q', state.query);
   if (state.selected) params.set('sel', state.selected);
   if (state.mapView) {
@@ -132,7 +135,7 @@ export function readHash() {
     const [a, b] = dates.split('..');
     next.dates = a <= b ? [a, b] : [b, a];
   }
-  const setKeys = { mo: 'months', tg: 'tags', src: 'sources', co: 'countries', vs: 'verification', cs: 'position' };
+  const setKeys = { mo: 'months', tg: 'tags', src: 'sources', co: 'countries', vs: 'verification', cs: 'position', ph: 'media' };
   for (const [param, key] of Object.entries(setKeys)) {
     const v = params.get(param);
     if (v) next[key] = new Set(v.split(',').filter(Boolean));

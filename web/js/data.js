@@ -64,6 +64,10 @@ function positionBucket(r) {
   return 'none';
 }
 
+function mediaBucket(r) {
+  return r.mc ? 'has' : 'none';
+}
+
 export function applyFilters(state) {
   const q = state.query.trim().toLowerCase();
   return formations.filter((r) => {
@@ -78,6 +82,7 @@ export function applyFilters(state) {
     if (state.countries.size > 0 && !state.countries.has(r.co ?? '')) return false;
     if (state.verification.size > 0 && !state.verification.has(r.vs)) return false;
     if (state.position.size > 0 && !state.position.has(positionBucket(r))) return false;
+    if (state.media.size > 0 && !state.media.has(mediaBucket(r))) return false;
     if (state.tags.size > 0) {
       for (const tag of state.tags) {
         if (tag === '_untagged') {
@@ -94,4 +99,4 @@ export function applyFilters(state) {
   });
 }
 
-export { positionBucket };
+export { positionBucket, mediaBucket };

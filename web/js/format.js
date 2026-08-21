@@ -54,6 +54,10 @@ export function waybackBadge(fm) {
   return fm === 'w' ? '<span class="badge badge-wayback" title="Recovered from an archived capture">archived</span>' : '';
 }
 
+export function noPhotoBadge(mc) {
+  return mc ? '' : '<span class="badge badge-nophoto" title="No photo captured from the source page">no photo</span>';
+}
+
 /** Wayback lookup URL for any asset (used as broken-image fallback). */
 export function waybackUrlFor(url) {
   return `https://web.archive.org/web/*/${url}`;

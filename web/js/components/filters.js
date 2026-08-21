@@ -1,11 +1,12 @@
 import { getState, toggleSetValue, update, clearFilters, hasActiveFilters, isWholeYearRange } from '../state.js';
-import { getFormations, getMeta, applyFilters, positionBucket } from '../data.js';
+import { getFormations, getMeta, applyFilters, positionBucket, mediaBucket } from '../data.js';
 import { esc } from '../format.js';
 
 const SOURCE_LABELS = { cca: 'CC Archives ’78–13', ccc: 'CC Connector ’14–', dcca: 'Dutch Archive', iccra: 'ICCRA (US)', ircup: 'IRCUP' };
 const MONTH_ABBR = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const POSITION_LABELS = { exact: 'exact', approx: 'region-level', none: 'not mappable' };
+const MEDIA_LABELS = { has: 'has photo', none: 'no photo' };
 const STATUS_LABELS = { r: 'reported', hs: 'hoax suspected', ha: 'hoax admitted', ina: 'no anomaly', iba: 'bio anomaly', u: 'unresolved' };
 
 const OPEN_KEY = 'cca-filters-open';
@@ -69,6 +70,7 @@ function render() {
   })();
   const byMonth = countBy(withoutGroup('months'), (r) => (r._month === null ? null : String(r._month)));
   const byPosition = countBy(withoutGroup('position'), positionBucket);
+  const byMedia = countBy(withoutGroup('media'), mediaBucket);
   const byVerification = countBy(withoutGroup('verification'), (r) => r.vs);
 
   const monthMax = Math.max(1, ...byMonth.values());
@@ -97,6 +99,7 @@ function render() {
   for (const v of state.months) pills.push({ key: 'months', value: v, label: MONTH_FULL[Number(v) - 1] ?? v });
   for (const v of state.tags) pills.push({ key: 'tags', value: v, label: tagLabel(v) });
   for (const v of state.position) pills.push({ key: 'position', value: v, label: POSITION_LABELS[v] ?? v });
+  for (const v of state.media) pills.push({ key: 'media', value: v, label: MEDIA_LABELS[v] ?? v });
   for (const v of state.verification) pills.push({ key: 'verification', value: v, label: STATUS_LABELS[v] ?? v });
   for (const v of state.countries) pills.push({ key: 'countries', value: v, label: v || '(unknown)' });
   if (state.dates) {
@@ -176,6 +179,12 @@ function render() {
         ${chip('exact', 'position', 'exact', byPosition.get('exact') ?? 0, state.position.has('exact'), 'GPS or OS-grid coordinates')}
         ${chip('region-level', 'position', 'approx', byPosition.get('approx') ?? 0, state.position.has('approx'), 'Approximate region centroid')}
         ${chip('not mappable', 'position', 'none', byPosition.get('none') ?? 0, state.position.has('none'))}
+      </div>
+
+      <div class="filter-group" role="group" aria-label="Media">
+        <label>Photos</label>
+        ${chip('has photo', 'media', 'has', byMedia.get('has') ?? 0, state.media.has('has'))}
+        ${chip('no photo', 'media', 'none', byMedia.get('none') ?? 0, state.media.has('none'), 'No photo captured from the source page')}
       </div>
 
       <div class="filter-group" role="group" aria-label="Verification">

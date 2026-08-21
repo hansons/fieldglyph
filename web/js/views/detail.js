@@ -6,6 +6,7 @@ import {
   PRECISION_LABEL,
   positionBadge,
   verificationBadge,
+  noPhotoBadge,
   waybackUrlFor,
 } from '../format.js';
 import { getReviewerName } from '../lib/reviewerIdentity.js';
@@ -321,6 +322,7 @@ function render(record, detail) {
       <div class="badge-row">
         ${positionBadge(record.cs)}
         ${verificationBadge(record.vs)}
+        ${noPhotoBadge(record.mc)}
         ${record.ct ? `<span class="badge">crop: ${esc(record.ct)}</span>` : ''}
       </div>
       ${(record.tg ?? []).length ? `<div class="badge-row">${record.tg.map((t) => `<button class="chip" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div>` : ''}

@@ -1,6 +1,6 @@
 import { getState, update } from '../state.js';
 import { applyFilters } from '../data.js';
-import { esc, formatDate, waybackBadge, positionBadge } from '../format.js';
+import { esc, formatDate, waybackBadge, positionBadge, noPhotoBadge } from '../format.js';
 import { openDrawer } from './detail.js';
 
 const CHUNK = 150;
@@ -73,7 +73,7 @@ export function renderList(container) {
         <td>${esc(r.t ?? '(untitled)')} ${waybackBadge(r.fm)}</td>
         <td>${esc([r.ar, r.co].filter(Boolean).join(', '))} ${positionBadge(r.cs)}</td>
         <td>${(r.tg ?? []).map((t) => `<span class="badge">${esc(t)}</span>`).join(' ')}</td>
-        <td>${r.mc || ''}</td>
+        <td>${r.mc || noPhotoBadge(r.mc)}</td>
         <td>${esc(r.src)}</td>
       </tr>`,
       )

@@ -293,6 +293,7 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
 .badge-hoax { border-color: var(--danger); color: var(--danger); }
 .badge-exact { border-color: var(--exact); color: var(--exact); }
 .badge-approx { border-color: var(--approx); color: var(--approx); }
+.badge-nophoto { border-style: dashed; }
 .list-banner {
   padding: 10px 14px;
   background: var(--accent-soft);
