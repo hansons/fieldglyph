@@ -90,6 +90,11 @@ function mergeCaptions(parts: string[]): string | undefined {
   return kept.length > 0 ? kept.join(' ') : undefined;
 }
 
+// Camera auto-naming (DSCF1234.jpg, IMG_5678.jpg, P1020982.gif, MVC-024F.jpg, DSCN…)
+// never collides with hand-named site chrome, so it's a safe positive signal for a
+// real formation photo even when it isn't in the page's own directory.
+const CAMERA_FILENAME_RE = /^(dscf?_?|img_?|dcp_?|mvc-?|p\d)/i;
+
 export function parseCccFormation(fetchResult: FetchResult, _page?: SourcePage): ParsedFormation[] {
   const $ = cheerio.load(fetchResult.html);
   const warnings: string[] = [];
@@ -208,7 +213,10 @@ export function parseCccFormation(fetchResult: FetchResult, _page?: SourcePage):
   }
 
   // Formation photos sit in the same directory as the page; all chrome lives in
-  // parent directories, so "src without a slash" isolates the real imagery.
+  // parent directories, so "src without a slash" isolates the real imagery — except
+  // camera-generated filenames (DSCF1234.jpg, IMG_5678.jpg, P1020982.gif, MVC-024F.jpg,
+  // …), which sometimes get uploaded into a shared sibling folder instead. That naming
+  // convention never collides with hand-named chrome, so it's a safe carve-out.
   // Only per-formation-directory "a" pages are the AERIAL SHOTS convention;
   // flat archive pages mix aerial and ground, so leave the flag unset there.
   const pathname = new URL(fetchResult.url).pathname;
@@ -218,10 +226,12 @@ export function parseCccFormation(fetchResult: FetchResult, _page?: SourcePage):
   const seenCaptionTds = new Set<unknown>();
   $('img').each((_, el) => {
     const src = $(el).attr('src');
-    if (!src || src.includes('/')) return;
+    if (!src) return;
+    const basename = src.split('/').pop() ?? '';
+    if (src.includes('/') && !CAMERA_FILENAME_RE.test(basename)) return;
     // Site-chrome banners (tour/season/meals promo images) are reused verbatim
     // across hundreds of formation directories and are never the formation photo.
-    if (/banner/i.test(src)) return;
+    if (/banner/i.test(basename)) return;
     const url = new URL(src, fetchResult.url).toString();
 
     const td = $(el).closest('td');

@@ -1,12 +1,12 @@
 {
-  "generated": "2026-08-21T17:31:05.274Z",
+  "generated": "2026-08-21T19:27:23.114Z",
   "totals": {
-    "records": 3443,
-    "media": 16179,
-    "geocoded": 2251,
-    "tagged": 837,
-    "withText": 1617,
-    "symbolizable": 2891,
+    "records": 3474,
+    "media": 16287,
+    "geocoded": 1408,
+    "tagged": 620,
+    "withText": 813,
+    "symbolizable": 2923,
     "symbols": {},
     "tagProposals": {}
   },
@@ -17,11 +17,11 @@
       "status": "active",
       "baseUrl": "https://www.cropcirclearchives.co.uk",
       "notes": "Crop Circle Connector's own archive of its pre-2014 database (same organization, public, no paywall), 1978-2013 plus international collections. Two page vintages: CCC-style slug-directory pages (later years) and flat per-formation pages (early years). MiscellaneousCircles section and direct-linked .jpg-only formations not yet harvested.",
-      "records": 1352,
-      "geocoded": 1008,
-      "described": 561,
+      "records": 1383,
+      "geocoded": 239,
+      "described": 587,
       "wayback": 0,
-      "media": 9893
+      "media": 9999
     },
     {
       "key": "ccc",
@@ -30,10 +30,10 @@
       "baseUrl": "https://www.cropcircleconnector.com",
       "notes": "The largest active crop circle database, running since 1995 (Mark Fussell & Stuart Dike). Live site exposes 2014-present; pre-2014 years moved to cropcirclearchives.co.uk (same organization — future connector). Only aerial-shots pages are harvested so far; per-formation sub-pages (ground shots, diagrams, field reports) are a future enhancement. Images are per-photographer copyright: metadata + link-back only, never bulk-copied.",
       "records": 459,
-      "geocoded": 364,
-      "described": 243,
+      "geocoded": 290,
+      "described": 254,
       "wayback": 0,
-      "media": 4612
+      "media": 4614
     },
     {
       "key": "cco",
@@ -100,105 +100,106 @@
     {
       "id": "circle",
       "label": "Simple circle(s)",
-      "count": 654
+      "count": 508
     },
     {
       "id": "ring",
       "label": "Ring / concentric",
-      "count": 202
+      "count": 170
     },
     {
       "id": "pathway",
       "label": "Pathways / avenues",
-      "count": 127
+      "count": 99
     },
     {
       "id": "oval",
       "label": "Oval / ellipse",
-      "count": 33
+      "count": 32
     },
     {
       "id": "pictogram",
       "label": "Pictogram",
-      "count": 43
+      "count": 31
     },
     {
       "id": "dumbbell",
       "label": "Dumbbell",
-      "count": 26
+      "count": 23
     },
     {
       "id": "cross",
       "label": "Cross",
-      "count": 41
+      "count": 21
     },
     {
       "id": "triangle",
       "label": "Triangle / triskelion",
-      "count": 45
+      "count": 26
     },
     {
       "id": "lattice",
       "label": "Lattice / weave",
-      "count": 12
+      "count": 6
     },
     {
       "id": "text-code",
       "label": "Text / code",
-      "count": 16
+      "count": 2
     },
     {
       "id": "star",
       "label": "Star / pentagram",
-      "count": 31
+      "count": 13
     },
     {
       "id": "key-claw",
       "label": "Key / claw / comb",
-      "count": 16
+      "count": 11
     },
     {
       "id": "grapeshot",
       "label": "Grapeshot / satellites",
-      "count": 21
+      "count": 15
     },
     {
       "id": "spiral",
       "label": "Spiral",
-      "count": 28
+      "count": 11
     },
     {
       "id": "celtic",
       "label": "Celtic knot / cross",
-      "count": 12
+      "count": 6
     },
     {
       "id": "figure",
       "label": "Face / figure",
-      "count": 19
+      "count": 8
     },
     {
       "id": "crescent",
       "label": "Crescent / moon",
-      "count": 17
+      "count": 4
     },
     {
       "id": "fractal",
       "label": "Fractal",
-      "count": 4
+      "count": 3
     },
     {
       "id": "serpent",
       "label": "Serpent",
-      "count": 7
+      "count": 3
     },
     {
       "id": "mandala",
       "label": "Mandala / flower-of-life",
-      "count": 6
+      "count": 1
     }
   ],
   "yearHistogram": {
+    "808": 1,
     "1590": 1,
     "1909": 1,
     "1919": 1,
@@ -251,20 +252,20 @@
     "1996": 79,
     "1997": 92,
     "1998": 67,
-    "1999": 31,
+    "1999": 32,
     "2000": 173,
     "2001": 105,
     "2002": 125,
     "2003": 156,
     "2004": 250,
-    "2005": 222,
-    "2006": 121,
-    "2007": 180,
-    "2008": 146,
-    "2009": 180,
-    "2010": 162,
-    "2011": 45,
-    "2012": 71,
+    "2005": 223,
+    "2006": 127,
+    "2007": 182,
+    "2008": 151,
+    "2009": 184,
+    "2010": 165,
+    "2011": 48,
+    "2012": 76,
     "2013": 81,
     "2014": 84,
     "2015": 65,
