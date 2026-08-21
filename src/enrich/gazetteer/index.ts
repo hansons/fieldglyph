@@ -2,6 +2,7 @@ import { ukRegions } from './uk.ts';
 import { nlRegions } from './nl.ts';
 import { usRegions } from './us.ts';
 import { caRegions } from './ca.ts';
+import { ruRegions } from './ru.ts';
 
 export interface GazetteerEntry {
   name: string;
@@ -45,6 +46,7 @@ const tables: Record<string, CompiledEntry[]> = {
   netherlands: compile(nlRegions),
   'united states': compile(usRegions),
   canada: compile(caRegions),
+  russia: compile(ruRegions),
 };
 
 /**

@@ -1,12 +1,12 @@
 {
-  "generated": "2026-08-21T13:51:38.692Z",
+  "generated": "2026-08-21T16:17:36.432Z",
   "totals": {
     "records": 3443,
-    "media": 16442,
-    "geocoded": 2174,
-    "tagged": 664,
-    "withText": 1095,
-    "symbolizable": 2894,
+    "media": 16179,
+    "geocoded": 2181,
+    "tagged": 837,
+    "withText": 1628,
+    "symbolizable": 2891,
     "symbols": {},
     "tagProposals": {}
   },
@@ -18,10 +18,10 @@
       "baseUrl": "https://www.cropcirclearchives.co.uk",
       "notes": "Crop Circle Connector's own archive of its pre-2014 database (same organization, public, no paywall), 1978-2013 plus international collections. Two page vintages: CCC-style slug-directory pages (later years) and flat per-formation pages (early years). MiscellaneousCircles section and direct-linked .jpg-only formations not yet harvested.",
       "records": 1352,
-      "geocoded": 989,
-      "described": 0,
+      "geocoded": 991,
+      "described": 561,
       "wayback": 0,
-      "media": 10089
+      "media": 9893
     },
     {
       "key": "ccc",
@@ -30,10 +30,10 @@
       "baseUrl": "https://www.cropcircleconnector.com",
       "notes": "The largest active crop circle database, running since 1995 (Mark Fussell & Stuart Dike). Live site exposes 2014-present; pre-2014 years moved to cropcirclearchives.co.uk (same organization — future connector). Only aerial-shots pages are harvested so far; per-formation sub-pages (ground shots, diagrams, field reports) are a future enhancement. Images are per-photographer copyright: metadata + link-back only, never bulk-copied.",
       "records": 459,
-      "geocoded": 306,
-      "described": 282,
+      "geocoded": 311,
+      "described": 254,
       "wayback": 0,
-      "media": 4680
+      "media": 4612
     },
     {
       "key": "cco",
@@ -100,102 +100,102 @@
     {
       "id": "circle",
       "label": "Simple circle(s)",
-      "count": 536
+      "count": 654
     },
     {
       "id": "ring",
       "label": "Ring / concentric",
-      "count": 175
+      "count": 202
     },
     {
       "id": "pathway",
       "label": "Pathways / avenues",
-      "count": 100
+      "count": 127
     },
     {
       "id": "oval",
       "label": "Oval / ellipse",
-      "count": 32
+      "count": 33
     },
     {
       "id": "pictogram",
       "label": "Pictogram",
-      "count": 33
+      "count": 43
     },
     {
       "id": "dumbbell",
       "label": "Dumbbell",
-      "count": 23
+      "count": 26
     },
     {
       "id": "cross",
       "label": "Cross",
-      "count": 22
+      "count": 41
     },
     {
       "id": "triangle",
       "label": "Triangle / triskelion",
-      "count": 34
+      "count": 45
     },
     {
       "id": "lattice",
       "label": "Lattice / weave",
-      "count": 6
+      "count": 12
     },
     {
       "id": "text-code",
       "label": "Text / code",
-      "count": 4
+      "count": 16
     },
     {
       "id": "star",
       "label": "Star / pentagram",
-      "count": 13
+      "count": 31
     },
     {
       "id": "key-claw",
       "label": "Key / claw / comb",
-      "count": 11
+      "count": 16
     },
     {
       "id": "grapeshot",
       "label": "Grapeshot / satellites",
-      "count": 16
+      "count": 21
     },
     {
       "id": "spiral",
       "label": "Spiral",
-      "count": 14
+      "count": 28
     },
     {
       "id": "celtic",
       "label": "Celtic knot / cross",
-      "count": 7
+      "count": 12
     },
     {
       "id": "figure",
       "label": "Face / figure",
-      "count": 9
+      "count": 19
     },
     {
       "id": "crescent",
       "label": "Crescent / moon",
-      "count": 6
+      "count": 17
     },
     {
       "id": "fractal",
       "label": "Fractal",
-      "count": 3
+      "count": 4
     },
     {
       "id": "serpent",
       "label": "Serpent",
-      "count": 3
+      "count": 7
     },
     {
       "id": "mandala",
       "label": "Mandala / flower-of-life",
-      "count": 2
+      "count": 6
     }
   ],
   "yearHistogram": {

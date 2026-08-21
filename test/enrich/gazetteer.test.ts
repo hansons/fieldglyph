@@ -31,6 +31,18 @@ test('matchRegion: US states incl. USPS abbreviations', () => {
   assert.equal(matchRegion('United States', 'SC')?.name, 'South Carolina');
 });
 
+test('matchRegion: Russian federal subjects, incl. real messy admin_region values', () => {
+  assert.equal(matchRegion('Russia', 'Krasnodar')?.name, 'Krasnodar Krai');
+  assert.equal(matchRegion('Russia', 'Krasnodarskiy')?.name, 'Krasnodar Krai'); // observed variant
+  assert.equal(matchRegion('Russia', 'in Krasnodar')?.name, 'Krasnodar Krai'); // substring rescue
+  assert.equal(matchRegion('Russia', 'Adygea')?.name, 'Adygea');
+  assert.equal(matchRegion('Russia', 'Irkutsk Oblast')?.name, 'Irkutsk Oblast');
+  // District/city names within Krasnodar Krai stay unlocated by design —
+  // aliases are spelling variants of the same entity, not child regions.
+  assert.equal(matchRegion('Russia', 'Gulkevichsky'), null);
+  assert.equal(matchRegion('Russia', 'Tikhoretsk'), null);
+});
+
 test('matchRegion: country guard prevents cross-table collisions', () => {
   // Georgia (US state) must not match for a record whose country is Georgia-the-country.
   assert.equal(matchRegion('Georgia', 'Georgia'), null);

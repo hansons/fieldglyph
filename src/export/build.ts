@@ -17,6 +17,11 @@ const VERIFICATION_CODE: Record<string, string> = {
   unresolved: 'u',
 };
 
+// Belt-and-suspenders against site-chrome banner images (see ccc/parse.ts):
+// catches any row that entered the db before that filter existed, or from a
+// source page missing from the fetch cache so it can't be reparsed.
+const isBannerUrl = (url: string): boolean => /banner/i.test(url);
+
 export interface IndexRecord {
   id: string;
   sy?: 1; // has an acceptable symbolic representation
@@ -116,7 +121,7 @@ export function buildExport(repo: Repository, regionRadius: RegionRadiusLookup):
     const country = (row.country as string | null) ?? undefined;
     const date = (row.discovered_date as string | null) ?? undefined;
     const coordSource = (row.coordinate_source as string | null) ?? 'unknown';
-    const media = mediaByFormation.get(uid) ?? [];
+    const media = (mediaByFormation.get(uid) ?? []).filter((m) => !isBannerUrl(m.url as string));
 
     // Freshness guards.
     if (country === 'Holland') warnings.push(`Un-enriched country "Holland" on ${id}`);

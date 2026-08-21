@@ -219,6 +219,9 @@ export function parseCccFormation(fetchResult: FetchResult, _page?: SourcePage):
   $('img').each((_, el) => {
     const src = $(el).attr('src');
     if (!src || src.includes('/')) return;
+    // Site-chrome banners (tour/season/meals promo images) are reused verbatim
+    // across hundreds of formation directories and are never the formation photo.
+    if (/banner/i.test(src)) return;
     const url = new URL(src, fetchResult.url).toString();
 
     const td = $(el).closest('td');
