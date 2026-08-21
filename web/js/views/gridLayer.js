@@ -20,8 +20,12 @@ const GridBinLayer = L.Layer.extend({
     this._canvas = L.DomUtil.create('canvas', 'grid-bin-layer leaflet-layer');
     map.getPanes().overlayPane.appendChild(this._canvas);
     map.on('moveend zoomend resize', this._redraw, this);
+    // Deliberately no disableClickPropagation here: it also swallows
+    // mousedown, which is how Leaflet's own drag handler starts a pan —
+    // stopping that on this full-map overlay silently killed dragging
+    // whenever it started over a filled cell (independent of the map's
+    // click behavior, which is otherwise unused).
     L.DomEvent.on(this._canvas, 'click', this._onClick, this);
-    L.DomEvent.disableClickPropagation(this._canvas);
     this._redraw();
   },
 
