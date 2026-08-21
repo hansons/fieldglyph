@@ -1,9 +1,9 @@
 {
-  "generated": "2026-08-21T16:17:36.432Z",
+  "generated": "2026-08-21T16:36:53.264Z",
   "totals": {
     "records": 3443,
     "media": 16179,
-    "geocoded": 2181,
+    "geocoded": 2251,
     "tagged": 837,
     "withText": 1628,
     "symbolizable": 2891,
@@ -18,7 +18,7 @@
       "baseUrl": "https://www.cropcirclearchives.co.uk",
       "notes": "Crop Circle Connector's own archive of its pre-2014 database (same organization, public, no paywall), 1978-2013 plus international collections. Two page vintages: CCC-style slug-directory pages (later years) and flat per-formation pages (early years). MiscellaneousCircles section and direct-linked .jpg-only formations not yet harvested.",
       "records": 1352,
-      "geocoded": 991,
+      "geocoded": 1008,
       "described": 561,
       "wayback": 0,
       "media": 9893
@@ -30,7 +30,7 @@
       "baseUrl": "https://www.cropcircleconnector.com",
       "notes": "The largest active crop circle database, running since 1995 (Mark Fussell & Stuart Dike). Live site exposes 2014-present; pre-2014 years moved to cropcirclearchives.co.uk (same organization — future connector). Only aerial-shots pages are harvested so far; per-formation sub-pages (ground shots, diagrams, field reports) are a future enhancement. Images are per-photographer copyright: metadata + link-back only, never bulk-copied.",
       "records": 459,
-      "geocoded": 311,
+      "geocoded": 364,
       "described": 254,
       "wayback": 0,
       "media": 4612

@@ -3,6 +3,14 @@ import { nlRegions } from './nl.ts';
 import { usRegions } from './us.ts';
 import { caRegions } from './ca.ts';
 import { ruRegions } from './ru.ts';
+import { deRegions } from './de.ts';
+import { itRegions } from './it.ts';
+import { czRegions } from './cz.ts';
+import { chRegions } from './ch.ts';
+import { plRegions } from './pl.ts';
+import { frRegions } from './fr.ts';
+import { beRegions } from './be.ts';
+import { brRegions } from './br.ts';
 
 export interface GazetteerEntry {
   name: string;
@@ -47,6 +55,14 @@ const tables: Record<string, CompiledEntry[]> = {
   'united states': compile(usRegions),
   canada: compile(caRegions),
   russia: compile(ruRegions),
+  germany: compile(deRegions),
+  italy: compile(itRegions),
+  'czech republic': compile(czRegions),
+  switzerland: compile(chRegions),
+  poland: compile(plRegions),
+  france: compile(frRegions),
+  belgium: compile(beRegions),
+  brazil: compile(brRegions),
 };
 
 /**

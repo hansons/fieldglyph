@@ -43,11 +43,75 @@ test('matchRegion: Russian federal subjects, incl. real messy admin_region value
   assert.equal(matchRegion('Russia', 'Tikhoretsk'), null);
 });
 
+test('matchRegion: German states, incl. observed typos and substring rescue', () => {
+  assert.equal(matchRegion('Germany', 'Hessen')?.name, 'Hesse');
+  assert.equal(matchRegion('Germany', 'nr Hessen')?.name, 'Hesse'); // substring rescue
+  assert.equal(matchRegion('Germany', 'Nordrheinwestfalen')?.name, 'North Rhine-Westphalia');
+  assert.equal(matchRegion('Germany', 'Nieder Sachses')?.name, 'Lower Saxony'); // observed typo
+  assert.equal(matchRegion('Germany', 'nr Berlin')?.name, 'Berlin');
+  // Berlin/Hessen town names within these states stay unlocated by design.
+  assert.equal(matchRegion('Germany', 'nr Lichtenrede'), null);
+  assert.equal(matchRegion('Germany', 'near Kassel'), null);
+});
+
+test('matchRegion: Italian regions and provinces', () => {
+  assert.equal(matchRegion('Italy', 'Siena')?.name, 'Siena');
+  assert.equal(matchRegion('Italy', 'Piedmont')?.name, 'Piedmont');
+  assert.equal(matchRegion('Italy', 'Nrr imola Emilie Romagne')?.name, 'Emilia-Romagna');
+  assert.equal(matchRegion('Italy', 'near Milan'), null); // city, not a region/province
+});
+
+test('matchRegion: Czech kraje and pre-2000 historical regions', () => {
+  assert.equal(matchRegion('Czech Republic', 'Vysocina')?.name, 'Vysočina');
+  assert.equal(matchRegion('Czech Republic', 'South Moravian')?.name, 'South Moravian');
+  assert.equal(matchRegion('Czech Republic', 'Morave')?.name, 'Moravia');
+  assert.equal(matchRegion('Czech Republic', '(North Moravia)')?.name, 'North Moravia');
+  assert.equal(matchRegion('Czech Republic', '(West country)')?.name, 'West Bohemia');
+  assert.equal(matchRegion('Czech Republic', 'nr Popelka'), null); // town
+});
+
+test('matchRegion: Swiss cantons', () => {
+  assert.equal(matchRegion('Switzerland', 'nr Bern')?.name, 'Bern');
+  assert.equal(matchRegion('Switzerland', 'Nr Zurich')?.name, 'Zürich');
+  assert.equal(matchRegion('Switzerland', 'Canton Fribourg')?.name, 'Fribourg');
+  assert.equal(matchRegion('Switzerland', 'Lüstlingen'), null); // unverifiable place
+});
+
+test('matchRegion: Polish voivodeships', () => {
+  assert.equal(matchRegion('Poland', 'Kujawsko-Pomorskie')?.name, 'Kujawsko-Pomorskie');
+  assert.equal(matchRegion('Poland', 'Nr Wrześni'), null); // town, voivodeship not named
+});
+
+test('matchRegion: French departments/regions, incl. hyphen normalization', () => {
+  assert.equal(matchRegion('France', 'Pas-de-Calais')?.name, 'Pas-de-Calais');
+  assert.equal(matchRegion('France', 'Seine et Marne')?.name, 'Seine-et-Marne'); // no hyphen in source
+  assert.equal(matchRegion('France', 'Nr Issoire in Puy-de-Dôme')?.name, 'Puy-de-Dôme');
+  assert.equal(matchRegion('France', 'Nr Chauvigny. Vienne')?.name, 'Vienne');
+  assert.equal(matchRegion('France', 'Bourgogne')?.name, 'Bourgogne');
+  assert.equal(matchRegion('France', 'Nr Saint Hippolyte'), null); // town
+});
+
+test('matchRegion: Belgian provinces', () => {
+  assert.equal(matchRegion('Belgium', 'nr Antwerp')?.name, 'Antwerp');
+  assert.equal(matchRegion('Belgium', 'North East Momalle'), null); // village, no province named
+});
+
+test('matchRegion: Brazilian states, incl. southern-hemisphere latitude', () => {
+  const sc = matchRegion('Brazil', 'Santa Catarina');
+  assert.equal(sc?.name, 'Santa Catarina');
+  assert.ok(sc!.lat < 0);
+  assert.equal(matchRegion('Brazil', 'SC')?.name, 'Santa Catarina');
+  assert.equal(matchRegion('Brazil', 'Nr Paraná')?.name, 'Paraná');
+  assert.equal(matchRegion('Brazil', 'Ipuaçu'), null); // city, not the state name
+});
+
 test('matchRegion: country guard prevents cross-table collisions', () => {
   // Georgia (US state) must not match for a record whose country is Georgia-the-country.
   assert.equal(matchRegion('Georgia', 'Georgia'), null);
-  // A German region never matches any table — deliberately unlocated.
-  assert.equal(matchRegion('Germany', 'Bavaria'), null);
+  // A German region must not match under the wrong country.
+  assert.equal(matchRegion('France', 'Bavaria'), null);
+  // A region for a country with no gazetteer table at all — deliberately unlocated.
+  assert.equal(matchRegion('Peru', 'Nazca'), null);
   // Short USPS codes never substring-match inside longer text.
   assert.equal(matchRegion('United States', 'normal text'), null);
 });
