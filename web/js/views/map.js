@@ -281,6 +281,15 @@ export function renderMap(container) {
       if (!map) return;
       highlightSlide(e.detail?.id ?? null);
     });
+
+    // The gallery's own "show all" escape hatch: forget that the visitor
+    // has interacted, same as a fresh map, so the viewport stops
+    // restricting the gallery and idle auto-panning resumes.
+    document.addEventListener('clear-view-restriction', () => {
+      if (!map) return;
+      userHasInteracted = false;
+      announceVisibleRecords();
+    });
   }
 
   exactLayer.clearLayers();

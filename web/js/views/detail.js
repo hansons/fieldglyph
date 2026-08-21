@@ -111,6 +111,17 @@ function slideStep(direction, { fromTimer = false } = {}) {
   if (!fromTimer) startSlideshow(); // manual step: restart the dwell timer
 }
 
+// One click undoes the map-viewport restriction below, whichever of the two
+// places it's showing (the slideshow hint or the empty state).
+function clearViewRestriction() {
+  document.dispatchEvent(new CustomEvent('clear-view-restriction'));
+}
+
+function viewRestrictionNote() {
+  if (!visibleIds) return ' matching the current filters';
+  return ' in the current map view (<button type="button" class="inline-link-btn" id="ss-clear-view">show all</button>)';
+}
+
 function renderSlide() {
   const r = slideRecords[slideIdx];
   const place = [r.ln, r.ar, r.co].filter(Boolean).join(', ');
@@ -132,7 +143,7 @@ function renderSlide() {
       <h2>${esc(r.t ?? '(untitled formation)')}</h2>
       <div class="drawer-sub">${formatDate(r.d, r.dp)}</div>
       <div class="drawer-sub">${esc(place)}</div>
-      <p class="ss-hint">Slideshow of the ${slideRecords.length} formations with imagery${visibleIds ? ' in the current map view' : ' matching the current filters'} —
+      <p class="ss-hint">Slideshow of the ${slideRecords.length} formations with imagery${viewRestrictionNote()} —
         click the photo to open the full record.</p>
     </div>`;
 
@@ -145,6 +156,7 @@ function renderSlide() {
     renderSlide();
   });
   drawerEl.querySelector('#ss-open').addEventListener('click', () => openDrawer(r.id, currentOrder));
+  drawerEl.querySelector('#ss-clear-view')?.addEventListener('click', clearViewRestriction);
   drawerEl.querySelector('.drawer-hero').addEventListener('error', () => {
     // Dead image link — drop the record and keep the show going.
     slideRecords = slideRecords.filter((rec) => rec !== r);
@@ -184,7 +196,7 @@ function renderPlaceholder() {
     const emptyReason =
       slideRecords.length === 0 && filtered.length > 0
         ? inView.length === 0
-          ? 'Nothing matches the current filters within this map view — pan or zoom out to widen it. '
+          ? 'Nothing matches the current filters within this map view — pan or zoom out, or <button type="button" class="inline-link-btn" id="ss-clear-view">show all</button>. '
           : 'No preserved imagery in the current view. '
         : '';
     drawerEl.innerHTML = `
@@ -198,6 +210,7 @@ function renderPlaceholder() {
         <p>Then <kbd>←</kbd> <kbd>→</kbd> step through neighbouring records.</p>
       </div>`;
     drawerEl.querySelector('#dr-close').addEventListener('click', closeDrawer);
+    drawerEl.querySelector('#ss-clear-view')?.addEventListener('click', clearViewRestriction);
     slideChanged(null);
     return;
   }
