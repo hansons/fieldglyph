@@ -14,7 +14,8 @@ it, with disagreements kept visible rather than silently overwritten.
 | ccdb.cropcircleresearch.com (IRCUP) | **Dead — DNS fails.** Founder Paul Vigay died 2009 | `ircup` ✅ complete | Database was login-walled even while live; Wayback only ever saw the sign-on page. Sole recovery: one RSS snapshot, 7 records. ~587 record IDs exist in the CDX index but their content was never captured. |
 | iccra.org | Static since ~2011-2015, still resolves | `iccra` ✅ full | US formations by state; detail filenames embed city/county/date |
 | cropcircleconnector.com | **Active** (updated daily in season) | `ccc` ✅ 2014–present | Aerial pages only so far; sub-pages (ground/diagrams/field reports) are a follow-on. OS grid refs + streetmap-provided WGS84 coords captured. |
-| cropcirclearchives.co.uk | Public, same org as CCC (not an orphaned mirror as first believed) | ⬜ next | Holds CCC's pre-2014 archive, 1978–2018 index |
+| cropcirclearchives.co.uk | Public, same org as CCC (not an orphaned mirror as first believed) | `cca` ✅ full | Holds CCC's pre-2014 archive, 1978–2018 index |
+| cropcirclesonline.com | Static since ~2014–2020, still resolves | `cco` ✅ full | Independent 30-country archive (one shared table template per country). Owner's editorializing (lightning-causation theory, unrelated fringe content elsewhere on the domain) is not harvested — only date/location/crop/photo fields. Deepens Italy/Germany/UK/Belgium/Poland/Czech coverage; first-ever records for Bosnia, Cyprus, Indonesia, South Korea. |
 | cropdecoder.com | Live; claims 4,700+ formations / 346 years | ⬜ | Structure not yet characterized — plain fetch doesn't expose content (possible JS/JSON backend). Treat the 346-year claim skeptically. |
 | culture-crop.com | Live, French; curated link index | ⬜ | Harvest links → feed new domains into the Wayback sweep |
 | circleresearcharchive.com | Live digitization project (600+ scanned magazines) | — | **Not** a formation database (guidance doc overstated it). Partnership conversation, not a scrape target. |
@@ -27,9 +28,10 @@ it, with disagreements kept visible rather than silently overwritten.
 1. ✅ **Staging pipeline** — connector framework, raw-HTML cache (the archive's
    real safety net), Wayback CDX/snapshot fallback, charset-correct fetching,
    SQLite staging schema with per-field precision flags.
-2. 🔶 **Live + abandoned harvest** — DCCA, IRCUP, ICCRA, CCC done;
-   cropcirclearchives.co.uk, Crop Decoder, culture-crop remain. CCC sub-pages
-   (ground shots, diagrams, field reports) need a merge-by-externalId upsert path.
+2. 🔶 **Live + abandoned harvest** — DCCA, IRCUP, ICCRA, CCC, cropcirclearchives.co.uk,
+   and cropcirclesonline.com (30-country archive) done; Crop Decoder, culture-crop
+   remain. CCC sub-pages (ground shots, diagrams, field reports) need a
+   merge-by-externalId upsert path.
 3. ⬜ **Ongoing intake** — scheduled incremental CCC runs (fetch_log timestamps
    support "new since last run"); current-season trackers as a feed.
 4. ⬜ **Print/OCR pass** — pre-web formations from the four books + image set.

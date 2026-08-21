@@ -5,6 +5,7 @@ import { connector as ircupConnector, sourceDef as ircupSourceDef } from './ircu
 import { connector as iccraConnector, sourceDef as iccraSourceDef } from './iccra/index.ts';
 import { connector as cccConnector, sourceDef as cccSourceDef } from './ccc/index.ts';
 import { connector as ccaConnector, sourceDef as ccaSourceDef } from './cca/index.ts';
+import { connector as ccoConnector, sourceDef as ccoSourceDef } from './cco/index.ts';
 
 export interface RegisteredConnector {
   connector: Connector;
@@ -17,6 +18,7 @@ export const connectors: Record<string, RegisteredConnector> = {
   iccra: { connector: iccraConnector, sourceDef: iccraSourceDef },
   ccc: { connector: cccConnector, sourceDef: cccSourceDef },
   cca: { connector: ccaConnector, sourceDef: ccaSourceDef },
+  cco: { connector: ccoConnector, sourceDef: ccoSourceDef },
 };
 
 export function getConnector(id: string): RegisteredConnector {
