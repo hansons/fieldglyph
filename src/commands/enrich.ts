@@ -4,6 +4,7 @@ import { normalizeCountry } from '../enrich/countries.ts';
 import { isYearSane, repairDate } from '../enrich/dates.ts';
 import { matchRegion } from '../enrich/gazetteer/index.ts';
 import { deriveTags } from '../enrich/tags.ts';
+import { stripSiteChrome } from '../enrich/siteChromeCleanup.ts';
 import { osGridToLatLon } from '../core/geo.ts';
 import { createLogger } from '../core/logger.ts';
 
@@ -25,6 +26,8 @@ export function runEnrich(opts: { dryRun?: boolean } = {}): void {
     dates: 0,
     coords: 0,
     centroids: 0,
+    descriptionsCleaned: 0,
+    mediaTextCleaned: 0,
     tags: 0,
     unmatchedRegions: new Map<string, number>(),
   };
@@ -105,8 +108,21 @@ export function runEnrich(opts: { dryRun?: boolean } = {}): void {
       }
     }
 
-    // 4. Auto-tagging from descriptions.
-    const tags = deriveTags(row.description);
+    // 4. Description cleanup: strip site chrome (donation banners, embedded
+    // ad scripts, page-nav tab labels) that leaked into the scraped text.
+    let effectiveDescription = row.description;
+    if (row.description) {
+      const cleaned = stripSiteChrome(row.description);
+      if (cleaned !== row.description) {
+        patch.description = cleaned;
+        effectiveDescription = cleaned;
+        stats.descriptionsCleaned++;
+      }
+    }
+
+    // 5. Auto-tagging from descriptions (post-cleanup, so ad-script text
+    // never influences the derived tags).
+    const tags = deriveTags(effectiveDescription);
     const tagsJson = tags === null ? null : JSON.stringify(tags);
     if (tagsJson !== row.formation_type_tags) {
       patch.formation_type_tags = tagsJson;
@@ -122,10 +138,30 @@ export function runEnrich(opts: { dryRun?: boolean } = {}): void {
     }
   }
 
+  // 6. Same site-chrome cleanup over photo credits — copyright_notice is
+  // often worse than description, since a page's chrome + every photo
+  // credit on it gets concatenated identically into each photo's row.
+  for (const media of repo.listMediaForEnrich()) {
+    const mediaPatch: Parameters<Repository['applyMediaEnrichment']>[1] = {};
+    if (media.caption) {
+      const cleaned = stripSiteChrome(media.caption);
+      if (cleaned !== media.caption) mediaPatch.caption = cleaned;
+    }
+    if (media.copyright_notice) {
+      const cleaned = stripSiteChrome(media.copyright_notice);
+      if (cleaned !== media.copyright_notice) mediaPatch.copyright_notice = cleaned;
+    }
+    if (Object.keys(mediaPatch).length > 0) {
+      stats.mediaTextCleaned++;
+      if (!opts.dryRun) repo.applyMediaEnrichment(media.id, mediaPatch);
+    }
+  }
+
   logger.info(
     `${opts.dryRun ? '[dry-run] ' : ''}Enrichment over ${rows.length} records: ` +
       `${stats.countries} country fix(es), ${stats.dates} date repair(s), ` +
       `${stats.coords} coordinate repair(s), ${stats.centroids} centroid assignment(s), ` +
+      `${stats.descriptionsCleaned} description cleanup(s), ${stats.mediaTextCleaned} media caption/credit cleanup(s), ` +
       `${stats.tags} tag update(s)`,
   );
 

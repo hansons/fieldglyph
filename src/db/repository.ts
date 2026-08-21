@@ -265,6 +265,7 @@ export class Repository {
       coordinate_source: string;
       discovered_date: string | null;
       discovered_date_precision: string;
+      description: string | null;
       formation_type_tags: string | null;
       parse_warnings: string | null;
     }>,
@@ -275,6 +276,19 @@ export class Repository {
     this.db
       .prepare(`UPDATE formation_reports SET ${sets}, updated_at=@updatedAt WHERE id=@id`)
       .run({ ...patch, id, updatedAt: new Date().toISOString() });
+  }
+
+  listMediaForEnrich(): Array<{ id: number; caption: string | null; copyright_notice: string | null }> {
+    return this.db
+      .prepare('SELECT id, caption, copyright_notice FROM formation_media')
+      .all() as ReturnType<Repository['listMediaForEnrich']>;
+  }
+
+  applyMediaEnrichment(id: number, patch: Partial<{ caption: string | null; copyright_notice: string | null }>): void {
+    const keys = Object.keys(patch);
+    if (keys.length === 0) return;
+    const sets = keys.map((k) => `${k}=@${k}`).join(', ');
+    this.db.prepare(`UPDATE formation_media SET ${sets} WHERE id=@id`).run({ ...patch, id });
   }
 
   listFormationsForExport(): Array<Record<string, unknown>> {
