@@ -45,10 +45,16 @@ async function* discoverPages(ctx: ConnectorContext): AsyncGenerator<SourcePage>
 
   // Newest first, so --limit runs exercise the current season.
   for (let year = endYear; year >= START_YEAR; year--) {
+    // The current year's index/month pages gain new links all season long, so
+    // they must be re-fetched live every run — everything else is a frozen
+    // archive page, safe to serve from cache forever.
+    const isCurrentYear = year === endYear;
     const yearUrl = `${BASE_URL}/${year}/${year}.html`;
     let yearPage;
     try {
-      yearPage = await ctx.http.fetchPage(yearUrl, 'live-then-wayback');
+      yearPage = await ctx.http.fetchPage(yearUrl, 'live-then-wayback', {
+        forceRefetch: isCurrentYear,
+      });
     } catch (err) {
       ctx.logger.warn('Failed to fetch CCC year index, skipping year', {
         yearUrl,
@@ -83,7 +89,9 @@ async function* discoverPages(ctx: ConnectorContext): AsyncGenerator<SourcePage>
     ];
     for (const monthUrl of monthUrls) {
       try {
-        const monthPage = await ctx.http.fetchPage(monthUrl, 'live-then-wayback');
+        const monthPage = await ctx.http.fetchPage(monthUrl, 'live-then-wayback', {
+          forceRefetch: isCurrentYear,
+        });
         listingPages.push({ url: monthPage.url, html: monthPage.html });
       } catch (err) {
         ctx.logger.warn('Failed to fetch CCC month page, skipping', {
@@ -120,7 +128,7 @@ export const connector: Connector = {
   displayName: 'Crop Circle Connector',
   baseUrl: BASE_URL,
   defaultFetchMode: 'live-then-wayback',
-  parserVersion: '1.1.0',
+  parserVersion: '1.2.0',
   discoverPages,
   parsePage: parseCccFormation,
 };

@@ -67,6 +67,29 @@ function yearFromUrl(url: string): string | undefined {
   return /\/(?:inter)?(\d{4})\//i.exec(new URL(url).pathname)?.[1];
 }
 
+// Credit lines ("Images Nick Bull Copyright 2019") and site boilerplate that can
+// appear bolded in the same gallery cell as a genuine caption.
+const NON_CAPTION_RE =
+  /copyright|^images?\b|facebook|crop circle connector|membership|map ref|has been accessed|^updated\b/i;
+
+function isCaptionCandidate(text: string): boolean {
+  return text.length >= 15 && !NON_CAPTION_RE.test(text);
+}
+
+// Nested/malformed <b> tags on these pages can yield overlapping captures of the
+// same sentence; keep only the longest span covering each one.
+function mergeCaptions(parts: string[]): string | undefined {
+  const kept: string[] = [];
+  for (const part of parts) {
+    if (kept.some((k) => k.includes(part))) continue;
+    for (let i = kept.length - 1; i >= 0; i--) {
+      if (part.includes(kept[i]!)) kept.splice(i, 1);
+    }
+    kept.push(part);
+  }
+  return kept.length > 0 ? kept.join(' ') : undefined;
+}
+
 export function parseCccFormation(fetchResult: FetchResult, _page?: SourcePage): ParsedFormation[] {
   const $ = cheerio.load(fetchResult.html);
   const warnings: string[] = [];
@@ -191,18 +214,33 @@ export function parseCccFormation(fetchResult: FetchResult, _page?: SourcePage):
   const pathname = new URL(fetchResult.url).pathname;
   const isAerialPage = /\/[^/]+\/[^/]+a\.html?$/i.test(pathname);
   const media: ParsedMedia[] = [];
+  const captionParts: string[] = [];
+  const seenCaptionTds = new Set<unknown>();
   $('img').each((_, el) => {
     const src = $(el).attr('src');
     if (!src || src.includes('/')) return;
     const url = new URL(src, fetchResult.url).toString();
 
+    const td = $(el).closest('td');
+    const tdText = td.text().replace(/\s+/g, ' ').trim();
     let copyrightNotice: string | undefined;
-    const tdText = $(el).closest('td').text().replace(/\s+/g, ' ').trim();
     const creditMatch = /((?:IMAGES?|Photos?)\s+[^.]*?copyright[^.]*?)(?:\.|$)/i.exec(tdText);
     if (creditMatch) {
       copyrightNotice = creditMatch[1]!.trim().slice(0, 300);
     } else if (/copyright/i.test(tdText)) {
       copyrightNotice = tdText.slice(0, 300);
+    }
+
+    // A caption sentence — location/size/shape — sometimes sits bolded in the
+    // same cell as the photos, ahead of the "Images ... Copyright" credit line.
+    // Visit each gallery cell once; multiple photos commonly share one <td>.
+    const tdEl = td.get(0);
+    if (tdEl && !seenCaptionTds.has(tdEl)) {
+      seenCaptionTds.add(tdEl);
+      td.find('b').each((_, b) => {
+        const text = $(b).text().replace(/\s+/g, ' ').trim();
+        if (isCaptionCandidate(text)) captionParts.push(text);
+      });
     }
 
     media.push({
@@ -214,6 +252,8 @@ export function parseCccFormation(fetchResult: FetchResult, _page?: SourcePage):
         'Per-photographer copyright — see http://www.cropcircleconnector.com/anasazi/ImageUsePolicy2004.html',
     });
   });
+
+  const description = mergeCaptions(captionParts);
 
   const dirMatch = /\/(?:inter)?(\d{4})\/([^/]+)\/[^/]*$/i.exec(pathname);
   const flatMatch = /\/(?:inter)?(\d{4})\/([^/]+)\.html?$/i.exec(pathname);
@@ -231,6 +271,7 @@ export function parseCccFormation(fetchResult: FetchResult, _page?: SourcePage):
     {
       externalId,
       title: locationPart ? `${locationPart}${discoveredDate ? ` (reported ${discoveredDate})` : ''}` : titleText || undefined,
+      description,
       discoveredDate,
       discoveredDatePrecision,
       locationName,

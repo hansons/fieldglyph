@@ -65,6 +65,29 @@ test('parseCccFormation: media carries per-photographer copyright, never image b
   assert.ok([...credits].some((c) => /Hugh Newman/i.test(c ?? '')), 'second image block credit');
 });
 
+test('parseCccFormation: extracts a shape/size caption from the gallery cell as description', () => {
+  const result = fetchResultFor(
+    'https://www.cropcircleconnector.com/2019/Yarnbury/Yarnbury2019a.html',
+    'formation-yarnbury-2019.html',
+  );
+  const [formation] = parseCccFormation(result);
+
+  assert.equal(
+    formation?.description,
+    'Yarnbury Castle, Nr Steeple Langford, Wiltshire. 4 July 2019. c.130 ft (39.5m) small circle c. 20ft (6m) Thought to be planetary alignment relating to the position of the lunar eclipse on the 4 July.',
+  );
+});
+
+test('parseCccFormation: description is undefined when no gallery has a caption (credit lines only)', () => {
+  const result = fetchResultFor(
+    'https://www.cropcircleconnector.com/2026/milkhill/milkhill2026a.html',
+    'formation-milkhill-2026.html',
+  );
+  const [formation] = parseCccFormation(result);
+
+  assert.equal(formation?.description, undefined);
+});
+
 function syntheticPage(url: string, title: string): FetchResult {
   return {
     url,
