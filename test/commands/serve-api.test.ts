@@ -57,27 +57,92 @@ test('GET /api/symbols rejects bad status', async () => {
   assert.equal(res.status, 400);
 });
 
-test('POST /api/review approves and rejects with validation', async () => {
-  const bad = await fetch(`${BASE}/api/review`, {
+test('POST /api/symbol-review validates, and accepts/rejects with notes', async () => {
+  const bad = await fetch(`${BASE}/api/symbol-review`, {
     method: 'POST',
-    body: JSON.stringify({ symbolId: 'x', action: 'maybe' }),
+    body: JSON.stringify({ symbolId: 'x', verdict: 'maybe', reviewerName: 'alice' }),
   });
   assert.equal(bad.status, 400);
 
-  const missing = await fetch(`${BASE}/api/review`, {
+  const missingReviewer = await fetch(`${BASE}/api/symbol-review`, {
     method: 'POST',
-    body: JSON.stringify({ symbolId: 99999999, action: 'approve' }),
+    body: JSON.stringify({ symbolId, verdict: 'acceptable' }),
+  });
+  assert.equal(missingReviewer.status, 400);
+
+  const missing = await fetch(`${BASE}/api/symbol-review`, {
+    method: 'POST',
+    body: JSON.stringify({ symbolId: 99999999, verdict: 'acceptable', reviewerName: 'alice' }),
   });
   assert.equal(missing.status, 404);
 
-  const ok = await fetch(`${BASE}/api/review`, {
+  const enhanceWithoutNotes = await fetch(`${BASE}/api/symbol-review`, {
     method: 'POST',
-    body: JSON.stringify({ symbolId, action: 'reject', notes: 'test rejection' }),
+    body: JSON.stringify({ symbolId, verdict: 'enhancement_proposed', reviewerName: 'alice' }),
+  });
+  assert.equal(enhanceWithoutNotes.status, 400);
+
+  const ok = await fetch(`${BASE}/api/symbol-review`, {
+    method: 'POST',
+    body: JSON.stringify({ symbolId, verdict: 'unacceptable', reviewerName: 'alice', notes: 'test rejection' }),
   });
   assert.equal(ok.status, 200);
 
-  const rejected = await fetch(`${BASE}/api/symbols?status=rejected`);
-  const body = (await rejected.json()) as { symbols: Array<{ symbolId: number; reviewNotes: string }> };
+  const unacceptable = await fetch(`${BASE}/api/symbols?status=unacceptable`);
+  const body = (await unacceptable.json()) as {
+    symbols: Array<{ symbolId: number; reviewNotes: string; reviewedBy: string }>;
+  };
   const mine = body.symbols.find((s) => s.symbolId === symbolId);
   assert.equal(mine?.reviewNotes, 'test rejection');
+  assert.equal(mine?.reviewedBy, 'alice');
+});
+
+test('POST /api/symbol-replace: submitter cannot validate their own replacement, a different reviewer can', async () => {
+  const replace = await fetch(`${BASE}/api/symbol-replace`, {
+    method: 'POST',
+    body: JSON.stringify({
+      symbolId,
+      reviewerName: 'alice',
+      svg: '<svg xmlns="http://www.w3.org/2000/svg"><circle r="10"/></svg>',
+    }),
+  });
+  assert.equal(replace.status, 200);
+  const { newSymbolId } = (await replace.json()) as { newSymbolId: number };
+  assert.ok(newSymbolId);
+
+  const original = await fetch(`${BASE}/api/symbols?status=unacceptable`);
+  const originalBody = (await original.json()) as { symbols: Array<{ symbolId: number }> };
+  assert.ok(originalBody.symbols.some((s) => s.symbolId === symbolId), 'original superseded, now unacceptable');
+
+  const pending = await fetch(`${BASE}/api/symbols?status=pending`);
+  const pendingBody = (await pending.json()) as {
+    symbols: Array<{ symbolId: number; source: string; submittedBy: string; replacesSymbolId: number }>;
+  };
+  const replacement = pendingBody.symbols.find((s) => s.symbolId === newSymbolId);
+  assert.ok(replacement, 'replacement is pending');
+  assert.equal(replacement?.source, 'human_replacement');
+  assert.equal(replacement?.submittedBy, 'alice');
+  assert.equal(replacement?.replacesSymbolId, symbolId);
+
+  const selfValidate = await fetch(`${BASE}/api/symbol-review`, {
+    method: 'POST',
+    body: JSON.stringify({ symbolId: newSymbolId, verdict: 'acceptable', reviewerName: 'alice' }),
+  });
+  assert.equal(selfValidate.status, 403);
+
+  const selfValidateCaseVariant = await fetch(`${BASE}/api/symbol-review`, {
+    method: 'POST',
+    body: JSON.stringify({ symbolId: newSymbolId, verdict: 'acceptable', reviewerName: 'ALICE' }),
+  });
+  assert.equal(selfValidateCaseVariant.status, 403);
+
+  const otherValidate = await fetch(`${BASE}/api/symbol-review`, {
+    method: 'POST',
+    body: JSON.stringify({ symbolId: newSymbolId, verdict: 'acceptable', reviewerName: 'bob' }),
+  });
+  assert.equal(otherValidate.status, 200);
+
+  const acceptable = await fetch(`${BASE}/api/symbols?status=acceptable`);
+  const acceptableBody = (await acceptable.json()) as { symbols: Array<{ symbolId: number }> };
+  assert.ok(acceptableBody.symbols.some((s) => s.symbolId === newSymbolId));
 });

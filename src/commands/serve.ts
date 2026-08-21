@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createLogger } from '../core/logger.ts';
 import { openDb, runMigrations } from '../db/client.ts';
 import { Repository } from '../db/repository.ts';
+import { TAG_VOCABULARY } from '../enrich/tagVocabulary.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const webRoot = path.resolve(here, '..', '..', 'web');
@@ -70,37 +71,82 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString('utf-8'));
 }
 
+const STATUSES = ['pending', 'acceptable', 'unacceptable', 'enhancement_proposed'] as const;
+const VERDICTS = ['acceptable', 'unacceptable', 'enhancement_proposed'] as const;
+const VALID_TAG_IDS = new Set(TAG_VOCABULARY.map((t) => t.id));
+
+function conflictsWithSubmitter(submittedBy: string | null | undefined, reviewerName: string): boolean {
+  return !!submittedBy && submittedBy.trim().toLowerCase() === reviewerName.trim().toLowerCase();
+}
+
+function isValidReviewerName(v: unknown): v is string {
+  return typeof v === 'string' && v.trim().length > 0;
+}
+
+function isValidVerdict(v: unknown): v is (typeof VERDICTS)[number] {
+  return typeof v === 'string' && (VERDICTS as readonly string[]).includes(v);
+}
+
+function isValidTagArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((t) => typeof t === 'string' && VALID_TAG_IDS.has(t));
+}
+
+function symbolResponseRow(r: Record<string, unknown>) {
+  return {
+    symbolId: r.id,
+    formationId: (r.formation_uid as string).slice(0, 12),
+    title: r.title,
+    date: r.discovered_date,
+    datePrecision: r.discovered_date_precision,
+    place: [r.location_name, r.admin_region, r.country].filter(Boolean).join(', '),
+    tags: r.formation_type_tags ? JSON.parse(r.formation_type_tags as string) : [],
+    photoUrl: r.source_image_url,
+    svg: r.svg,
+    confidence: r.confidence,
+    modelNotes: r.spec_json ? (JSON.parse(r.spec_json as string).notes ?? '') : '',
+    reviewNotes: r.review_notes,
+    source: r.source,
+    submittedBy: r.submitted_by,
+    reviewedBy: r.reviewed_by,
+    replacesSymbolId: r.replaces_symbol_id,
+  };
+}
+
+function tagProposalResponseRow(r: Record<string, unknown>) {
+  return {
+    proposalId: r.id,
+    formationId: (r.formation_uid as string).slice(0, 12),
+    title: r.title,
+    date: r.discovered_date,
+    datePrecision: r.discovered_date_precision,
+    place: [r.location_name, r.admin_region, r.country].filter(Boolean).join(', '),
+    currentTags: r.formation_type_tags ? JSON.parse(r.formation_type_tags as string) : [],
+    proposedTags: JSON.parse(r.proposed_tags as string),
+    rationale: r.rationale,
+    status: r.status,
+    submittedBy: r.submitted_by,
+    reviewedBy: r.reviewed_by,
+    reviewNotes: r.review_notes,
+    replacesProposalId: r.replaces_proposal_id,
+  };
+}
+
 async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://localhost');
 
   if (req.method === 'GET' && url.pathname === '/api/symbols') {
     const status = url.searchParams.get('status') ?? 'pending';
-    if (!['pending', 'approved', 'rejected'].includes(status)) {
+    if (!(STATUSES as readonly string[]).includes(status)) {
       sendJson(res, 400, { error: 'invalid status' });
       return;
     }
-    const rows = getRepo()
-      .listSymbols(status)
-      .map((r) => ({
-        symbolId: r.id,
-        formationId: (r.formation_uid as string).slice(0, 12),
-        title: r.title,
-        date: r.discovered_date,
-        datePrecision: r.discovered_date_precision,
-        place: [r.location_name, r.admin_region, r.country].filter(Boolean).join(', '),
-        tags: r.formation_type_tags ? JSON.parse(r.formation_type_tags as string) : [],
-        photoUrl: r.source_image_url,
-        svg: r.svg,
-        confidence: r.confidence,
-        modelNotes: r.spec_json ? (JSON.parse(r.spec_json as string).notes ?? '') : '',
-        reviewNotes: r.review_notes,
-      }));
+    const rows = getRepo().listSymbols(status).map(symbolResponseRow);
     sendJson(res, 200, { symbols: rows });
     return;
   }
 
-  if (req.method === 'POST' && url.pathname === '/api/review') {
-    let body: { symbolId?: number; action?: string; notes?: string };
+  if (req.method === 'POST' && url.pathname === '/api/symbol-review') {
+    let body: { symbolId?: number; verdict?: string; reviewerName?: string; notes?: string };
     try {
       body = (await readJsonBody(req)) as typeof body;
     } catch {
@@ -109,21 +155,232 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
     }
     if (
       typeof body.symbolId !== 'number' ||
-      (body.action !== 'approve' && body.action !== 'reject')
+      !isValidVerdict(body.verdict) ||
+      !isValidReviewerName(body.reviewerName)
     ) {
-      sendJson(res, 400, { error: 'expected {symbolId: number, action: approve|reject, notes?}' });
+      sendJson(res, 400, {
+        error: 'expected {symbolId: number, verdict: acceptable|unacceptable|enhancement_proposed, reviewerName: string, notes?}',
+      });
       return;
     }
-    const ok = getRepo().setSymbolStatus(
-      body.symbolId,
-      body.action === 'approve' ? 'approved' : 'rejected',
-      body.notes,
-    );
-    if (!ok) {
+    if (body.verdict === 'enhancement_proposed' && !body.notes?.trim()) {
+      sendJson(res, 400, { error: 'notes are required for an enhancement_proposed verdict' });
+      return;
+    }
+    const symbol = getRepo().getSymbolForReview(body.symbolId);
+    if (!symbol) {
       sendJson(res, 404, { error: 'symbol not found' });
       return;
     }
+    if (conflictsWithSubmitter(symbol.submitted_by, body.reviewerName)) {
+      sendJson(res, 403, {
+        error: 'the submitter of this item cannot also validate it',
+        submittedBy: symbol.submitted_by,
+      });
+      return;
+    }
+    getRepo().setSymbolVerdict(body.symbolId, body.verdict, body.reviewerName, body.notes);
     sendJson(res, 200, { ok: true });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/symbol-replace') {
+    let body: { symbolId?: number; reviewerName?: string; svg?: string; notes?: string };
+    try {
+      body = (await readJsonBody(req)) as typeof body;
+    } catch {
+      sendJson(res, 400, { error: 'invalid JSON body' });
+      return;
+    }
+    if (
+      typeof body.symbolId !== 'number' ||
+      !isValidReviewerName(body.reviewerName) ||
+      typeof body.svg !== 'string' ||
+      !body.svg.includes('<svg') ||
+      !body.svg.includes('</svg>')
+    ) {
+      sendJson(res, 400, {
+        error: 'expected {symbolId: number, reviewerName: string, svg: string (a well-formed <svg>...</svg>), notes?}',
+      });
+      return;
+    }
+    const original = getRepo().getSymbolForReview(body.symbolId);
+    if (!original) {
+      sendJson(res, 404, { error: 'symbol not found' });
+      return;
+    }
+    if (conflictsWithSubmitter(original.submitted_by, body.reviewerName)) {
+      sendJson(res, 403, {
+        error: 'the submitter of this item cannot also validate it',
+        submittedBy: original.submitted_by,
+      });
+      return;
+    }
+    getRepo().setSymbolVerdict(
+      body.symbolId,
+      'unacceptable',
+      body.reviewerName,
+      body.notes ?? 'superseded by replacement',
+    );
+    const newSymbolId = getRepo().insertSymbol({
+      formationReportId: original.formation_report_id,
+      sourceImageUrl: original.source_image_url,
+      model: 'human',
+      specJson: JSON.stringify({
+        elements: [],
+        symmetry: { type: 'unknown', order: 1 },
+        confidence: 'n/a',
+        notes: 'human-submitted replacement',
+      }),
+      svg: body.svg,
+      confidence: null,
+      source: 'human_replacement',
+      submittedBy: body.reviewerName,
+      replacesSymbolId: body.symbolId,
+    });
+    sendJson(res, 200, { ok: true, newSymbolId });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/tag-proposals') {
+    const formationUid = url.searchParams.get('formationUid');
+    if (formationUid) {
+      const formationId = getRepo().getFormationIdByUidPrefix(formationUid);
+      if (formationId === undefined) {
+        sendJson(res, 404, { error: 'formation not found' });
+        return;
+      }
+      const rows = getRepo().listTagProposalsForFormation(formationId).map(tagProposalResponseRow);
+      sendJson(res, 200, { proposals: rows });
+      return;
+    }
+    const status = url.searchParams.get('status') ?? 'pending';
+    if (!(STATUSES as readonly string[]).includes(status)) {
+      sendJson(res, 400, { error: 'invalid status' });
+      return;
+    }
+    const rows = getRepo().listTagProposals(status).map(tagProposalResponseRow);
+    sendJson(res, 200, { proposals: rows });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/tag-propose') {
+    let body: { formationUid?: string; tags?: unknown; rationale?: string; reviewerName?: string };
+    try {
+      body = (await readJsonBody(req)) as typeof body;
+    } catch {
+      sendJson(res, 400, { error: 'invalid JSON body' });
+      return;
+    }
+    if (
+      typeof body.formationUid !== 'string' ||
+      !body.formationUid.trim() ||
+      !isValidTagArray(body.tags) ||
+      !isValidReviewerName(body.reviewerName)
+    ) {
+      sendJson(res, 400, {
+        error: 'expected {formationUid: string, tags: string[] (valid tag ids), reviewerName: string, rationale?}',
+      });
+      return;
+    }
+    const formationId = getRepo().getFormationIdByUidPrefix(body.formationUid);
+    if (formationId === undefined) {
+      sendJson(res, 404, { error: 'formation not found' });
+      return;
+    }
+    const proposalId = getRepo().insertTagProposal({
+      formationReportId: formationId,
+      proposedTags: body.tags,
+      rationale: body.rationale,
+      submittedBy: body.reviewerName,
+    });
+    sendJson(res, 200, { ok: true, proposalId });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/tag-review') {
+    let body: { proposalId?: number; verdict?: string; reviewerName?: string; notes?: string };
+    try {
+      body = (await readJsonBody(req)) as typeof body;
+    } catch {
+      sendJson(res, 400, { error: 'invalid JSON body' });
+      return;
+    }
+    if (
+      typeof body.proposalId !== 'number' ||
+      !isValidVerdict(body.verdict) ||
+      !isValidReviewerName(body.reviewerName)
+    ) {
+      sendJson(res, 400, {
+        error: 'expected {proposalId: number, verdict: acceptable|unacceptable|enhancement_proposed, reviewerName: string, notes?}',
+      });
+      return;
+    }
+    if (body.verdict === 'enhancement_proposed' && !body.notes?.trim()) {
+      sendJson(res, 400, { error: 'notes are required for an enhancement_proposed verdict' });
+      return;
+    }
+    const proposal = getRepo().getTagProposal(body.proposalId);
+    if (!proposal) {
+      sendJson(res, 404, { error: 'proposal not found' });
+      return;
+    }
+    if (conflictsWithSubmitter(proposal.submitted_by as string, body.reviewerName)) {
+      sendJson(res, 403, {
+        error: 'the submitter of this item cannot also validate it',
+        submittedBy: proposal.submitted_by,
+      });
+      return;
+    }
+    getRepo().setTagProposalVerdict(body.proposalId, body.verdict, body.reviewerName, body.notes);
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/tag-replace') {
+    let body: { proposalId?: number; reviewerName?: string; tags?: unknown; rationale?: string; notes?: string };
+    try {
+      body = (await readJsonBody(req)) as typeof body;
+    } catch {
+      sendJson(res, 400, { error: 'invalid JSON body' });
+      return;
+    }
+    if (
+      typeof body.proposalId !== 'number' ||
+      !isValidReviewerName(body.reviewerName) ||
+      !isValidTagArray(body.tags)
+    ) {
+      sendJson(res, 400, {
+        error: 'expected {proposalId: number, reviewerName: string, tags: string[] (valid tag ids), rationale?, notes?}',
+      });
+      return;
+    }
+    const original = getRepo().getTagProposal(body.proposalId);
+    if (!original) {
+      sendJson(res, 404, { error: 'proposal not found' });
+      return;
+    }
+    if (conflictsWithSubmitter(original.submitted_by as string, body.reviewerName)) {
+      sendJson(res, 403, {
+        error: 'the submitter of this item cannot also validate it',
+        submittedBy: original.submitted_by,
+      });
+      return;
+    }
+    getRepo().setTagProposalVerdict(
+      body.proposalId,
+      'unacceptable',
+      body.reviewerName,
+      body.notes ?? 'superseded by replacement',
+    );
+    const newProposalId = getRepo().insertTagProposal({
+      formationReportId: original.formation_report_id as number,
+      proposedTags: body.tags,
+      rationale: body.rationale,
+      submittedBy: body.reviewerName,
+      replacesProposalId: body.proposalId,
+    });
+    sendJson(res, 200, { ok: true, newProposalId });
     return;
   }
 

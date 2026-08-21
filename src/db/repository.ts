@@ -344,14 +344,25 @@ export class Repository {
     specJson: string;
     svg: string;
     confidence: string | null;
+    source?: 'ai' | 'human_replacement';
+    submittedBy?: string | null;
+    replacesSymbolId?: number | null;
   }): number {
     const info = this.db
       .prepare(
         `INSERT INTO formation_symbols
-           (formation_report_id, source_image_url, model, spec_json, svg, confidence, status, generated_at)
-         VALUES (@formationReportId, @sourceImageUrl, @model, @specJson, @svg, @confidence, 'pending', @generatedAt)`,
+           (formation_report_id, source_image_url, model, spec_json, svg, confidence, status,
+            generated_at, source, submitted_by, replaces_symbol_id)
+         VALUES (@formationReportId, @sourceImageUrl, @model, @specJson, @svg, @confidence, 'pending',
+                 @generatedAt, @source, @submittedBy, @replacesSymbolId)`,
       )
-      .run({ ...row, generatedAt: new Date().toISOString() });
+      .run({
+        ...row,
+        generatedAt: new Date().toISOString(),
+        source: row.source ?? 'ai',
+        submittedBy: row.submittedBy ?? null,
+        replacesSymbolId: row.replacesSymbolId ?? null,
+      });
     return Number(info.lastInsertRowid);
   }
 
@@ -368,12 +379,26 @@ export class Repository {
       .all(status) as Array<Record<string, unknown>>;
   }
 
-  listApprovedSymbolsByUid(): Map<string, { svg: string; confidence: string | null }> {
+  getSymbolForReview(
+    symbolId: number,
+  ): { id: number; formation_report_id: number; source_image_url: string; status: string; submitted_by: string | null } | undefined {
+    return this.db
+      .prepare(
+        `SELECT id, formation_report_id, source_image_url, status, submitted_by
+         FROM formation_symbols WHERE id = ?`,
+      )
+      .get(symbolId) as
+      | { id: number; formation_report_id: number; source_image_url: string; status: string; submitted_by: string | null }
+      | undefined;
+  }
+
+  listAcceptableSymbolsByUid(): Map<string, { svg: string; confidence: string | null }> {
     const rows = this.db
       .prepare(
         `SELECT f.uid, fs.svg, fs.confidence FROM formation_symbols fs
          JOIN formation_reports f ON f.id = fs.formation_report_id
-         WHERE fs.status = 'approved'`,
+         WHERE fs.status = 'acceptable'
+         ORDER BY fs.id`,
       )
       .all() as Array<{ uid: string; svg: string; confidence: string | null }>;
     const map = new Map<string, { svg: string; confidence: string | null }>();
@@ -381,14 +406,25 @@ export class Repository {
     return map;
   }
 
-  setSymbolStatus(symbolId: number, status: 'approved' | 'rejected', notes?: string): boolean {
+  setSymbolVerdict(
+    symbolId: number,
+    verdict: 'acceptable' | 'unacceptable' | 'enhancement_proposed',
+    reviewedBy: string,
+    notes?: string,
+  ): boolean {
     const info = this.db
       .prepare(
         `UPDATE formation_symbols
-         SET status=@status, review_notes=@notes, reviewed_at=@reviewedAt
+         SET status=@verdict, review_notes=@notes, reviewed_by=@reviewedBy, reviewed_at=@reviewedAt
          WHERE id=@symbolId`,
       )
-      .run({ symbolId, status, notes: notes ?? null, reviewedAt: new Date().toISOString() });
+      .run({
+        symbolId,
+        verdict,
+        notes: notes ?? null,
+        reviewedBy,
+        reviewedAt: new Date().toISOString(),
+      });
     return info.changes > 0;
   }
 
@@ -405,6 +441,120 @@ export class Repository {
     const counts: Record<string, number> = {};
     for (const r of rows) counts[r.status] = r.n;
     return counts;
+  }
+
+  // ---- tag proposals: human-submitted corrections to formation_type_tags ----
+
+  insertTagProposal(row: {
+    formationReportId: number;
+    proposedTags: string[];
+    rationale?: string | null;
+    submittedBy: string;
+    replacesProposalId?: number | null;
+  }): number {
+    const info = this.db
+      .prepare(
+        `INSERT INTO tag_proposals
+           (formation_report_id, proposed_tags, rationale, submitted_by, status, replaces_proposal_id, submitted_at)
+         VALUES (@formationReportId, @proposedTags, @rationale, @submittedBy, 'pending', @replacesProposalId, @submittedAt)`,
+      )
+      .run({
+        formationReportId: row.formationReportId,
+        proposedTags: JSON.stringify(row.proposedTags),
+        rationale: row.rationale ?? null,
+        submittedBy: row.submittedBy,
+        replacesProposalId: row.replacesProposalId ?? null,
+        submittedAt: new Date().toISOString(),
+      });
+    return Number(info.lastInsertRowid);
+  }
+
+  getTagProposal(proposalId: number): Record<string, unknown> | undefined {
+    return this.db.prepare('SELECT * FROM tag_proposals WHERE id = ?').get(proposalId) as
+      | Record<string, unknown>
+      | undefined;
+  }
+
+  setTagProposalVerdict(
+    proposalId: number,
+    verdict: 'acceptable' | 'unacceptable' | 'enhancement_proposed',
+    reviewedBy: string,
+    notes?: string,
+  ): boolean {
+    const info = this.db
+      .prepare(
+        `UPDATE tag_proposals
+         SET status=@verdict, review_notes=@notes, reviewed_by=@reviewedBy, reviewed_at=@reviewedAt
+         WHERE id=@proposalId`,
+      )
+      .run({
+        proposalId,
+        verdict,
+        notes: notes ?? null,
+        reviewedBy,
+        reviewedAt: new Date().toISOString(),
+      });
+    return info.changes > 0;
+  }
+
+  listTagProposals(status: string): Array<Record<string, unknown>> {
+    return this.db
+      .prepare(
+        `SELECT tp.*, f.uid AS formation_uid, f.title, f.discovered_date, f.discovered_date_precision,
+                f.location_name, f.admin_region, f.country, f.formation_type_tags
+         FROM tag_proposals tp
+         JOIN formation_reports f ON f.id = tp.formation_report_id
+         WHERE tp.status = ?
+         ORDER BY tp.id`,
+      )
+      .all(status) as Array<Record<string, unknown>>;
+  }
+
+  listTagProposalsForFormation(formationReportId: number): Array<Record<string, unknown>> {
+    return this.db
+      .prepare(
+        `SELECT tp.*, f.uid AS formation_uid, f.formation_type_tags
+         FROM tag_proposals tp
+         JOIN formation_reports f ON f.id = tp.formation_report_id
+         WHERE tp.formation_report_id = ?
+         ORDER BY tp.id DESC`,
+      )
+      .all(formationReportId) as Array<Record<string, unknown>>;
+  }
+
+  listAcceptedTagOverridesByFormation(): Map<number, string[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT formation_report_id, proposed_tags FROM tag_proposals
+         WHERE status = 'acceptable'
+         ORDER BY id`,
+      )
+      .all() as Array<{ formation_report_id: number; proposed_tags: string }>;
+    const map = new Map<number, string[]>();
+    for (const r of rows) map.set(r.formation_report_id, JSON.parse(r.proposed_tags) as string[]);
+    return map;
+  }
+
+  deleteTagProposalsForFormation(formationReportId: number): void {
+    this.db
+      .prepare('DELETE FROM tag_proposals WHERE formation_report_id = ?')
+      .run(formationReportId);
+  }
+
+  countTagProposals(): Record<string, number> {
+    const rows = this.db
+      .prepare('SELECT status, COUNT(*) n FROM tag_proposals GROUP BY status')
+      .all() as Array<{ status: string; n: number }>;
+    const counts: Record<string, number> = {};
+    for (const r of rows) counts[r.status] = r.n;
+    return counts;
+  }
+
+  getFormationIdByUidPrefix(idPrefix: string): number | undefined {
+    const row = this.db
+      .prepare('SELECT id FROM formation_reports WHERE uid LIKE ? || \'%\' LIMIT 1')
+      .get(idPrefix) as { id: number } | undefined;
+    return row?.id;
   }
 
   countFormations(sourceId: number): number {

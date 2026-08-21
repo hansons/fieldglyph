@@ -1,13 +1,14 @@
 {
-  "generated": "2026-08-20T16:07:17.309Z",
+  "generated": "2026-08-20T18:26:30.530Z",
   "totals": {
     "records": 2698,
     "media": 15759,
     "geocoded": 2174,
-    "tagged": 629,
-    "withText": 813,
+    "tagged": 664,
+    "withText": 1095,
     "symbolizable": 2211,
-    "symbols": {}
+    "symbols": {},
+    "tagProposals": {}
   },
   "sources": [
     {
@@ -30,7 +31,7 @@
       "notes": "The largest active crop circle database, running since 1995 (Mark Fussell & Stuart Dike). Live site exposes 2014-present; pre-2014 years moved to cropcirclearchives.co.uk (same organization — future connector). Only aerial-shots pages are harvested so far; per-formation sub-pages (ground shots, diagrams, field reports) are a future enhancement. Images are per-photographer copyright: metadata + link-back only, never bulk-copied.",
       "records": 459,
       "geocoded": 306,
-      "described": 0,
+      "described": 282,
       "wayback": 0,
       "media": 4680
     },
@@ -87,17 +88,17 @@
     {
       "id": "circle",
       "label": "Simple circle(s)",
-      "count": 508
+      "count": 536
     },
     {
       "id": "ring",
       "label": "Ring / concentric",
-      "count": 170
+      "count": 175
     },
     {
       "id": "pathway",
       "label": "Pathways / avenues",
-      "count": 99
+      "count": 100
     },
     {
       "id": "oval",
@@ -107,7 +108,7 @@
     {
       "id": "pictogram",
       "label": "Pictogram",
-      "count": 30
+      "count": 33
     },
     {
       "id": "dumbbell",
@@ -117,12 +118,12 @@
     {
       "id": "cross",
       "label": "Cross",
-      "count": 21
+      "count": 22
     },
     {
       "id": "triangle",
       "label": "Triangle / triskelion",
-      "count": 26
+      "count": 34
     },
     {
       "id": "lattice",
@@ -132,7 +133,7 @@
     {
       "id": "text-code",
       "label": "Text / code",
-      "count": 2
+      "count": 4
     },
     {
       "id": "star",
@@ -147,27 +148,27 @@
     {
       "id": "grapeshot",
       "label": "Grapeshot / satellites",
-      "count": 15
+      "count": 16
     },
     {
       "id": "spiral",
       "label": "Spiral",
-      "count": 9
+      "count": 14
     },
     {
       "id": "celtic",
       "label": "Celtic knot / cross",
-      "count": 6
+      "count": 7
     },
     {
       "id": "figure",
       "label": "Face / figure",
-      "count": 7
+      "count": 9
     },
     {
       "id": "crescent",
       "label": "Crescent / moon",
-      "count": 4
+      "count": 6
     },
     {
       "id": "fractal",
@@ -182,7 +183,7 @@
     {
       "id": "mandala",
       "label": "Mandala / flower-of-life",
-      "count": 1
+      "count": 2
     }
   ],
   "yearHistogram": {

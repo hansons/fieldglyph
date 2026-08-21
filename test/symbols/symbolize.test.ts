@@ -145,7 +145,7 @@ test('symbolizeCore: refusals and bad images are counted, not stored', async (t)
   assert.equal(repo.listSymbols('pending').length, 0);
 });
 
-test('setSymbolStatus: approve/reject round-trip with notes', () => {
+test('setSymbolVerdict: acceptable/unacceptable round-trip with notes', () => {
   const { db, repo } = makeDb();
   const fid = seedFormation(db, { uid: 'g'.repeat(40), source: 'ccc', media: [{ url: 'https://x/p.jpg', kind: 'photo' }] });
   const symbolId = repo.insertSymbol({
@@ -157,18 +157,19 @@ test('setSymbolStatus: approve/reject round-trip with notes', () => {
     confidence: 'medium',
   });
 
-  assert.equal(repo.setSymbolStatus(symbolId, 'rejected', 'missed the outer ring'), true);
-  const rejected = repo.listSymbols('rejected');
+  assert.equal(repo.setSymbolVerdict(symbolId, 'unacceptable', 'alice', 'missed the outer ring'), true);
+  const rejected = repo.listSymbols('unacceptable');
   assert.equal(rejected.length, 1);
   assert.equal(rejected[0]!.review_notes, 'missed the outer ring');
+  assert.equal(rejected[0]!.reviewed_by, 'alice');
   assert.ok(rejected[0]!.reviewed_at);
 
-  assert.equal(repo.setSymbolStatus(99999, 'approved'), false);
+  assert.equal(repo.setSymbolVerdict(99999, 'acceptable', 'alice'), false);
 
-  // Approved symbols surface for export keyed by uid.
-  repo.setSymbolStatus(symbolId, 'approved');
-  const approved = repo.listApprovedSymbolsByUid();
-  assert.equal(approved.get('g'.repeat(40))?.svg, '<svg/>');
+  // Acceptable symbols surface for export keyed by uid.
+  repo.setSymbolVerdict(symbolId, 'acceptable', 'alice');
+  const acceptable = repo.listAcceptableSymbolsByUid();
+  assert.equal(acceptable.get('g'.repeat(40))?.svg, '<svg/>');
 });
 
 test('buildUserText: includes context and flags diagrams', () => {

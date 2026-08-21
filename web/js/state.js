@@ -13,7 +13,7 @@ const DEFAULTS = () => ({
   query: '',
   selected: null, // formation id
   mapView: null, // { lat, lon, zoom }
-  mapFormat: 'cluster', // 'cluster' | 'heat' | 'grid'
+  mapFormat: 'heat', // 'cluster' | 'heat' | 'grid'
   mapBasemap: 'street', // 'street' | 'satellite'
 });
 
@@ -117,7 +117,7 @@ export function readHash() {
   if (viewPart?.startsWith('f/')) {
     next.view = 'map';
     next.selected = viewPart.slice(2);
-  } else if (['map', 'list', 'evolution', 'review', 'about', 'support'].includes(viewPart)) {
+  } else if (['map', 'list', 'evolution', 'review', 'tagreview', 'about', 'support'].includes(viewPart)) {
     next.view = viewPart;
   }
 

@@ -19,7 +19,8 @@ const VERIFICATION_CODE: Record<string, string> = {
 
 export interface IndexRecord {
   id: string;
-  sy?: 1; // has an approved symbolic representation
+  sy?: 1; // has an acceptable symbolic representation
+  th?: 1; // tags reflect a human-accepted correction, not just the auto-deriver
   src: string;
   t?: string;
   d?: string;
@@ -79,8 +80,10 @@ function round5(n: number): number {
 export function buildExport(repo: Repository, regionRadius: RegionRadiusLookup): ExportBundle {
   const rows = repo.listFormationsForExport();
   const mediaRows = repo.listAllMedia();
-  const approvedSymbols = repo.listApprovedSymbolsByUid();
+  const acceptableSymbols = repo.listAcceptableSymbolsByUid();
   const symbolCounts = repo.countSymbols();
+  const tagOverrides = repo.listAcceptedTagOverridesByFormation();
+  const tagProposalCounts = repo.countTagProposals();
   const generated = new Date().toISOString();
   const warnings: string[] = [];
 
@@ -130,7 +133,9 @@ export function buildExport(repo: Repository, regionRadius: RegionRadiusLookup):
     }
 
     const tagsRaw = row.formation_type_tags as string | null;
-    const tags = tagsRaw ? (JSON.parse(tagsRaw) as string[]) : undefined;
+    const autoTags = tagsRaw ? (JSON.parse(tagsRaw) as string[]) : undefined;
+    const tagOverride = tagOverrides.get(row.id as number);
+    const tags = tagOverride ?? autoTags;
     for (const tag of tags ?? []) tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
 
     const srcKey = row.source_key as string;
@@ -156,11 +161,12 @@ export function buildExport(repo: Repository, regionRadius: RegionRadiusLookup):
         ? regionRadius((row.country as string | null) ?? null, (row.admin_region as string | null) ?? null)
         : undefined;
 
-    const symbol = approvedSymbols.get(uid);
+    const symbol = acceptableSymbols.get(uid);
 
     const record: IndexRecord = {
       id,
       sy: symbol ? 1 : undefined,
+      th: tagOverride ? 1 : undefined,
       src: srcKey,
       t: (row.title as string | null) ?? undefined,
       d: date,
@@ -229,6 +235,7 @@ export function buildExport(repo: Repository, regionRadius: RegionRadiusLookup):
       withText: records.filter((r) => r.tg !== undefined).length,
       symbolizable: records.filter((r) => r.hi && r.src !== 'ircup' && r.sy !== 1).length,
       symbols: symbolCounts,
+      tagProposals: tagProposalCounts,
     },
     sources,
     tags: TAG_VOCABULARY.map((t) => ({ id: t.id, label: t.label, count: tagCounts[t.id] ?? 0 })),

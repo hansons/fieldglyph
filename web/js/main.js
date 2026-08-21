@@ -8,6 +8,7 @@ import { renderEvolution } from './views/evolution.js';
 import { renderAbout } from './views/about.js';
 import { renderSupport } from './views/support.js';
 import { renderReview, reviewKeydown } from './views/review.js';
+import { renderTagReview, tagReviewKeydown } from './views/tagReview.js';
 import { initDrawer, openDrawer, deselect } from './views/detail.js';
 
 const viewRoot = document.getElementById('view-root');
@@ -39,6 +40,9 @@ function renderView() {
       break;
     case 'review':
       renderReview(viewRoot);
+      break;
+    case 'tagreview':
+      renderTagReview(viewRoot);
       break;
     case 'about':
       renderAbout(viewRoot);
@@ -96,9 +100,22 @@ async function boot() {
     })
     .catch(() => {});
 
+  // Tag-review badge: pending tag-proposal count from the local curation API.
+  fetch('/api/tag-proposals?status=pending')
+    .then((r) => (r.ok ? r.json() : null))
+    .then((body) => {
+      const badge = document.getElementById('tagreview-badge');
+      if (badge && body && body.proposals.length > 0) {
+        badge.textContent = body.proposals.length;
+        badge.hidden = false;
+      }
+    })
+    .catch(() => {});
+
   // Global keyboard shortcuts.
   document.addEventListener('keydown', (e) => {
     if (getState().view === 'review' && reviewKeydown(e)) return;
+    if (getState().view === 'tagreview' && tagReviewKeydown(e)) return;
     if (e.target.matches('input, textarea, select')) return;
     if (e.key === '/') {
       e.preventDefault();

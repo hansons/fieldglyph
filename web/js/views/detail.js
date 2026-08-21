@@ -1,5 +1,5 @@
 import { getState, update, subscribe } from '../state.js';
-import { getById, getDetail, applyFilters } from '../data.js';
+import { getById, getDetail, applyFilters, getMeta } from '../data.js';
 import {
   esc,
   formatDate,
@@ -8,6 +8,7 @@ import {
   verificationBadge,
   waybackUrlFor,
 } from '../format.js';
+import { getReviewerName } from '../lib/reviewerIdentity.js';
 
 let currentOrder = [];
 let drawerEl;
@@ -291,6 +292,7 @@ function render(record, detail) {
         ${record.ct ? `<span class="badge">crop: ${esc(record.ct)}</span>` : ''}
       </div>
       ${(record.tg ?? []).length ? `<div class="badge-row">${record.tg.map((t) => `<button class="chip" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div>` : ''}
+      <div class="tag-propose" id="tag-propose"></div>
       ${detail?.sym ? `<div class="symbol-card">
         <div class="symbol-frame">${detail.sym.svg}</div>
         <div class="symbol-caption">Symbolic representation — AI-derived, curator-approved${detail.sym.cf ? ` · confidence ${esc(detail.sym.cf)}` : ''}</div>
@@ -324,6 +326,104 @@ function render(record, detail) {
   drawerEl.querySelectorAll('.media-strip img[data-full]').forEach((img) =>
     img.addEventListener('click', () => openLightbox(img.dataset.full, img.dataset.caption, detail?.su)),
   );
+
+  mountTagPropose(drawerEl.querySelector('#tag-propose'), record);
+}
+
+// Lazy, self-contained widget: only hits the local curation API once the user
+// actually opens it, and degrades to an explainer when that API isn't reachable
+// (a static/hosted deployment) — same detection pattern as the review queues.
+function mountTagPropose(container, record) {
+  if (!container) return;
+  let open = false;
+  let loaded = null; // null = not yet fetched, 'error' = API unreachable, else { proposals }
+
+  function paint() {
+    if (!open) {
+      container.innerHTML = `<button id="tp-toggle" class="tag-propose-toggle">Propose a tag correction</button>`;
+      container.querySelector('#tp-toggle').addEventListener('click', async () => {
+        open = true;
+        paint();
+        if (loaded === null) {
+          try {
+            const res = await fetch(`/api/tag-proposals?formationUid=${encodeURIComponent(record.id)}`);
+            if (!res.ok) throw new Error(String(res.status));
+            loaded = await res.json();
+          } catch {
+            loaded = 'error';
+          }
+          paint();
+        }
+      });
+      return;
+    }
+
+    if (loaded === null) {
+      container.innerHTML = `<div class="tag-propose-form"><p class="filter-hint">Loading…</p></div>`;
+      return;
+    }
+    if (loaded === 'error') {
+      container.innerHTML = `<div class="tag-propose-form honesty-banner">Proposing a correction needs the
+        local curation API — run <code>node src/cli.ts serve</code> on the machine that holds the archive
+        database. On a static host this is read-only by design.</div>`;
+      return;
+    }
+
+    const pending = loaded.proposals.find((p) => p.status === 'pending' || p.status === 'enhancement_proposed');
+    if (pending) {
+      container.innerHTML = `<div class="tag-propose-form"><p class="filter-hint">A correction proposed by
+        <strong>${esc(pending.submittedBy)}</strong> is already awaiting review${pending.status === 'enhancement_proposed' ? ' (flagged for further enhancement)' : ''}.</p></div>`;
+      return;
+    }
+
+    const vocabulary = getMeta().tags;
+    const selected = new Set(record.tg ?? []);
+    container.innerHTML = `<div class="tag-propose-form">
+      <div class="badge-row" id="tp-picker">
+        ${vocabulary.map((t) => `<button type="button" class="chip" data-tag="${esc(t.id)}" aria-pressed="${selected.has(t.id)}">${esc(t.label)}</button>`).join('')}
+      </div>
+      <input id="tp-rationale" type="text" placeholder="Why? (optional)…">
+      <div class="review-actions">
+        <button id="tp-submit">Submit for review</button>
+        <button id="tp-cancel">Cancel</button>
+      </div>
+    </div>`;
+    container.querySelectorAll('#tp-picker [data-tag]').forEach((el) => {
+      el.addEventListener('click', () => el.setAttribute('aria-pressed', el.getAttribute('aria-pressed') !== 'true'));
+    });
+    container.querySelector('#tp-cancel').addEventListener('click', () => {
+      open = false;
+      paint();
+    });
+    container.querySelector('#tp-submit').addEventListener('click', async () => {
+      const tags = [...container.querySelectorAll('#tp-picker [data-tag][aria-pressed="true"]')].map(
+        (el) => el.dataset.tag,
+      );
+      const rationale = container.querySelector('#tp-rationale').value.trim() || undefined;
+      const reviewerName = getReviewerName();
+      if (!reviewerName) return;
+      let res;
+      try {
+        res = await fetch('/api/tag-propose', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ formationUid: record.id, tags, rationale, reviewerName }),
+        });
+      } catch (err) {
+        alert(`Submitting failed: ${err}`);
+        return;
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(body.error ?? `Submitting failed (${res.status})`);
+        return;
+      }
+      loaded = { proposals: [{ status: 'pending', submittedBy: reviewerName }] };
+      paint();
+    });
+  }
+
+  paint();
 }
 
 function openLightbox(url, caption, sourceUrl) {
