@@ -203,6 +203,7 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
 .view-root > .view { position: absolute; inset: 0; overflow: auto; }
 .view-root > .view.view-map { overflow: hidden; }
 #leaflet-map { height: 100%; }
+.grid-bin-layer { cursor: pointer; }
 
 .map-legend {
   position: absolute;

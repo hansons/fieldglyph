@@ -11,6 +11,7 @@ const CELL_RGB = '61, 107, 179';
 const GridBinLayer = L.Layer.extend({
   initialize(options) {
     this._points = [];
+    this._bins = null;
     L.setOptions(this, { cellPx: 36, ...options });
   },
 
@@ -19,18 +20,36 @@ const GridBinLayer = L.Layer.extend({
     this._canvas = L.DomUtil.create('canvas', 'grid-bin-layer leaflet-layer');
     map.getPanes().overlayPane.appendChild(this._canvas);
     map.on('moveend zoomend resize', this._redraw, this);
+    L.DomEvent.on(this._canvas, 'click', this._onClick, this);
+    L.DomEvent.disableClickPropagation(this._canvas);
     this._redraw();
   },
 
   onRemove(map) {
+    L.DomEvent.off(this._canvas, 'click', this._onClick, this);
     L.DomUtil.remove(this._canvas);
     map.off('moveend zoomend resize', this._redraw, this);
     this._canvas = null;
+    this._bins = null;
   },
 
+  // Each point is {lat, lon, record} — the record travels with its position
+  // so a cell click can report back which formations it represents.
   setPoints(points) {
     this._points = points;
     if (this._map) this._redraw();
+  },
+
+  _cellKeyForContainerPoint(p) {
+    const cellPx = this.options.cellPx;
+    return `${Math.floor(p.x / cellPx)},${Math.floor(p.y / cellPx)}`;
+  },
+
+  _onClick(e) {
+    if (!this._bins || !this.options.onCellClick) return;
+    const point = this._map.mouseEventToContainerPoint(e);
+    const records = this._bins.get(this._cellKeyForContainerPoint(point));
+    if (records && records.length > 0) this.options.onCellClick(records);
   },
 
   _redraw() {
@@ -44,19 +63,23 @@ const GridBinLayer = L.Layer.extend({
     ctx.clearRect(0, 0, size.x, size.y);
 
     const cellPx = this.options.cellPx;
-    const bins = new Map();
-    for (const [lat, lon] of this._points) {
-      const p = this._map.latLngToContainerPoint([lat, lon]);
+    const bins = new Map(); // key -> record[]
+    for (const pt of this._points) {
+      const p = this._map.latLngToContainerPoint([pt.lat, pt.lon]);
       if (p.x < 0 || p.y < 0 || p.x > size.x || p.y > size.y) continue;
-      const key = `${Math.floor(p.x / cellPx)},${Math.floor(p.y / cellPx)}`;
-      bins.set(key, (bins.get(key) ?? 0) + 1);
+      const key = this._cellKeyForContainerPoint(p);
+      let bin = bins.get(key);
+      if (!bin) bins.set(key, (bin = []));
+      bin.push(pt.record);
     }
+    this._bins = bins;
     if (bins.size === 0) return;
 
-    const max = Math.max(...bins.values());
+    const max = Math.max(...[...bins.values()].map((records) => records.length));
     const logMax = Math.log(max + 1);
     const pad = 1;
-    for (const [key, count] of bins) {
+    for (const [key, records] of bins) {
+      const count = records.length;
       const [cx, cy] = key.split(',').map(Number);
       const t = logMax === 0 ? 1 : Math.log(count + 1) / logMax;
       const alpha = 0.15 + t * 0.7;

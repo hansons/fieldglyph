@@ -24,6 +24,10 @@ let mapContainerId = 'leaflet-map';
 // toggling format or the approx checkbox doesn't need a full data recompute.
 let lastExactPoints = [];
 let lastApproxPoints = [];
+// Same positions, paired with their record — heat only wants raw [lat,lng],
+// but the grid layer needs the record back on click.
+let lastExactRecordPoints = [];
+let lastApproxRecordPoints = [];
 
 // Once the visitor manually pans/zooms, the idle slideshow stops recentering
 // the view out from under them — it still rings the current slide's marker,
@@ -146,6 +150,14 @@ function markerFor(record) {
   return marker;
 }
 
+/** Grid mode bins many records per cell — clicking one opens the newest, same
+ *  as a marker click, with ← → still stepping through the full filtered set. */
+function openDrawerForGridCell(records) {
+  const newest = [...records].sort((a, b) => (b.d ?? '').localeCompare(a.d ?? ''))[0];
+  openDrawer(newest.id, applyFilters(getState()));
+  showRadius(newest);
+}
+
 export function renderMap(container) {
   const state = getState();
   const records = applyFilters(state);
@@ -225,7 +237,7 @@ export function renderMap(container) {
       maxZoom: 9,
       gradient: { 0.3: '#e6ecd8', 0.55: '#a3c065', 0.8: '#5d7a2e', 1: '#3d5620' },
     });
-    gridLayer = createGridLayer();
+    gridLayer = createGridLayer({ onCellClick: openDrawerForGridCell });
     // Which of exact/approx/heat/grid is on the map is decided by applyFormat()
     // below, driven by state.mapFormat — none of them get added here.
 
@@ -277,15 +289,19 @@ export function renderMap(container) {
   const approxMarkers = [];
   lastExactPoints = [];
   lastApproxPoints = [];
+  lastExactRecordPoints = [];
+  lastApproxRecordPoints = [];
   for (const r of mappable) {
     const m = markerFor(r);
     const pos = m.getLatLng();
     if (positionBucket(r) === 'exact') {
       exactMarkers.push(m);
       lastExactPoints.push([pos.lat, pos.lng]);
+      lastExactRecordPoints.push({ lat: pos.lat, lon: pos.lng, record: r });
     } else {
       approxMarkers.push(m);
       lastApproxPoints.push([pos.lat, pos.lng]);
+      lastApproxRecordPoints.push({ lat: pos.lat, lon: pos.lng, record: r });
     }
   }
   exactLayer.addLayers(exactMarkers);
@@ -366,9 +382,15 @@ function applyFormat() {
   }
 
   if (format === 'cluster') return;
-  const points = showApprox ? lastExactPoints.concat(lastApproxPoints) : lastExactPoints;
-  if (format === 'heat') heatLayer.setLatLngs(points);
-  else gridLayer.setPoints(points);
+  if (format === 'heat') {
+    const points = showApprox ? lastExactPoints.concat(lastApproxPoints) : lastExactPoints;
+    heatLayer.setLatLngs(points);
+  } else {
+    const recordPoints = showApprox
+      ? lastExactRecordPoints.concat(lastApproxRecordPoints)
+      : lastExactRecordPoints;
+    gridLayer.setPoints(recordPoints);
+  }
 }
 
 function highlightSlide(id) {
