@@ -18,7 +18,7 @@ function submittedBy(item) {
 function renderCard(item) {
   return `<div class="review-card">
     <figure class="review-photo">
-      <img src="${esc(item.photoUrl)}" alt="Source imagery for ${esc(item.title ?? '')}"
+      <img src="${esc(item.photoUrl)}" alt="Source imagery for ${esc(item.title ?? '')}" referrerpolicy="no-referrer"
         onerror="this.outerHTML='<div class=&quot;drawer-hero-fallback&quot;>📷 Image unavailable<br><a href=&quot;${esc(waybackUrlFor(item.photoUrl))}&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;>Try Wayback ↗</a></div>'">
       <figcaption>Source image (${esc(item.photoUrl.split('/').pop() ?? '')})</figcaption>
     </figure>

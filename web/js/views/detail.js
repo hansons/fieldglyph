@@ -138,7 +138,7 @@ function renderSlide() {
       <button id="dr-close" title="Close panel (Esc)">✕</button>
     </div>
     <button class="ss-slide" id="ss-open" title="Open this formation">
-      <img class="drawer-hero" src="${esc(r.hi)}" alt="${esc(r.t ?? 'formation photo')}">
+      <img class="drawer-hero" src="${esc(r.hi)}" alt="${esc(r.t ?? 'formation photo')}" referrerpolicy="no-referrer">
     </button>
     <div class="drawer-body">
       <h2>${esc(r.t ?? '(untitled formation)')}</h2>
@@ -279,7 +279,7 @@ function heroBlock(record, detail) {
     return `<div class="drawer-hero-fallback">◎<br>Source offline — imagery may survive in the Wayback Machine<br>
       <a href="${esc(waybackUrlFor(first.u))}" target="_blank" rel="noopener">Try Wayback Machine ↗</a></div>`;
   }
-  return `<img class="drawer-hero" src="${esc(record.hi)}" alt="${esc(record.t ?? 'formation photo')}"
+  return `<img class="drawer-hero" src="${esc(record.hi)}" alt="${esc(record.t ?? 'formation photo')}" referrerpolicy="no-referrer"
     onerror="this.outerHTML='<div class=&quot;drawer-hero-fallback&quot;>📷 Image unavailable from origin<br><a href=&quot;${esc(waybackUrlFor(record.hi))}&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;>Try Wayback Machine ↗</a></div>'">`;
 }
 
@@ -292,7 +292,7 @@ function mediaStrip(detail) {
       }
       const caption = m.ph ?? m.cp ?? '';
       return `<figure>
-        <img loading="lazy" src="${esc(m.u)}" alt="${esc(m.c ?? caption ?? 'formation image')}"
+        <img loading="lazy" src="${esc(m.u)}" alt="${esc(m.c ?? caption ?? 'formation image')}" referrerpolicy="no-referrer"
           data-full="${esc(m.u)}" data-caption="${esc(caption)}"
           onerror="this.closest('figure').innerHTML='<a class=&quot;media-link-card&quot; href=&quot;${esc(waybackUrlFor(m.u))}&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;>📷 offline<br>Wayback ↗</a>'">
         <figcaption title="${esc(caption)}">${m.k === 'diagram' ? '✎ ' : ''}${esc(caption) || '&nbsp;'}</figcaption>
@@ -463,7 +463,7 @@ function mountTagPropose(container, record) {
 function openLightbox(url, caption, sourceUrl) {
   lightboxEl.hidden = false;
   lightboxEl.innerHTML = `
-    <img src="${esc(url)}" alt="${esc(caption ?? '')}">
+    <img src="${esc(url)}" alt="${esc(caption ?? '')}" referrerpolicy="no-referrer">
     <div class="lb-caption">${esc(caption ?? '')}${sourceUrl ? ` — <a href="${esc(sourceUrl)}" target="_blank" rel="noopener">View on source page ↗</a>` : ''}</div>
     <button id="lb-close">Close (Esc)</button>
   `;

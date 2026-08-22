@@ -95,6 +95,96 @@ function mergeCaptions(parts: string[]): string | undefined {
 // real formation photo even when it isn't in the page's own directory.
 const CAMERA_FILENAME_RE = /^(dscf?_?|img_?|dcp_?|mvc-?|p\d)/i;
 
+interface ManualPhoto {
+  url: string;
+  isAerial?: boolean;
+  photographer?: string;
+  copyrightNotice: string;
+  caption?: string;
+}
+
+const CCA_POLICY_NOTICE =
+  'Per-photographer copyright — see http://www.cropcircleconnector.com/anasazi/ImageUsePolicy2004.html';
+
+// A handful of confirmed real photos for formations that otherwise have zero media —
+// hand-verified (fetched, opened, confirmed to show the actual formation, not site
+// chrome or a placeholder) rather than caught by a general rule. Keyed by page
+// pathname so the exception is auditable and travels with the parser instead of a
+// silent DB write. Two groups:
+//  - Same-site: a real photo the img-scraping heuristics above still miss, sourced
+//    from the same cca/ccc page, so the site's own image-use policy notice applies.
+//  - External: no photo exists anywhere on cropcirclearchives.co.uk/cropcircleconnector.com
+//    for this formation, but one was located elsewhere online and verified (by place +
+//    year, and for UK reports usually exact date) to depict this specific formation.
+//    Carries its own source-specific attribution instead of the cca/ccc policy notice.
+const MANUAL_EXTRA_PHOTOS: Record<string, ManualPhoto[]> = {
+  // Same-site (see austria95.html note below for the one non-obvious URL).
+  '/archives/2011/pitt1/pitt2011a.html': [
+    { url: 'https://www.cropcirclearchives.co.uk/archives/2011/images/Nr-Pitt03.jpg', isAerial: true, copyrightNotice: CCA_POLICY_NOTICE },
+  ],
+  // austria95.html's own <img src> is "../archives/1995/korn195.jpg", which resolves to
+  // a 404 (the page's relative path has a stray extra "archives/" segment) — the real
+  // file is one directory shallower, hence the absolute URL below.
+  '/archives/Inter95/austria95.html': [
+    { url: 'https://www.cropcirclearchives.co.uk/archives/1995/korn195.jpg', isAerial: true, copyrightNotice: CCA_POLICY_NOTICE },
+  ],
+  '/2014/wilmington2/wilmington2014b.html': [
+    { url: 'https://www.cropcircleconnector.com/2014/wiltshire2/wilmington2014sw.jpg', isAerial: false, copyrightNotice: CCA_POLICY_NOTICE },
+  ],
+  '/archives/inter99/Vig99a.html': [
+    { url: 'https://www.cropcirclearchives.co.uk/archives/inter98/K5w.jpg', isAerial: true, copyrightNotice: CCA_POLICY_NOTICE },
+  ],
+  // External — recovered via web search, no photo survives on the original site.
+  '/archives/1998/unconfirmed98.html': [
+    {
+      url: 'https://www.lucypringle.co.uk/photos/1998/uk1998ae.jpg',
+      isAerial: true,
+      photographer: 'Lucy Pringle',
+      copyrightNotice: 'Photo © Lucy Pringle — recovered from lucypringle.co.uk, not the original archive',
+      caption: 'Newton St Loe, near Bath — two circles, one larger; date and description match this record exactly.',
+    },
+  ],
+  '/archives/inter2000/bainbridge2000a.html': [
+    {
+      url: 'https://iccra.org/bystate/Ohio/images/bainbridge2000-2.jpg',
+      isAerial: true,
+      photographer: 'John Timmerman',
+      copyrightNotice: 'Photos: John Timmerman, landowner (name withheld); site © 2008 ICCRA — recovered from iccra.org, not the original archive',
+    },
+  ],
+  '/archives/inter99/Cottonwood99a.html': [
+    {
+      url: 'http://www.iccra.org/bystate/Washington/images/wallawalla1999-1.jpg',
+      isAerial: true,
+      copyrightNotice: '© 2008 ICCRA — recovered from iccra.org, not the original archive',
+    },
+  ],
+  '/archives/inter99/Borchen99a.html': [
+    {
+      url: 'https://web.archive.org/web/20000116092103im_/http://fgk.org/99/Berichte/Paderborn-1/PADERB1-Hoos.JPG',
+      isAerial: true,
+      photographer: 'Hoos (per FGK image filename); field report by Markus Schröder / FGK',
+      copyrightNotice: 'Recovered from fgk.org via Wayback Machine snapshot (Jan 2000), not the original archive',
+    },
+  ],
+  // The archive's own source_url for this record is a scraper mismatch (it actually
+  // points at an unrelated Lowville, Ontario report with no photo) — a pre-existing
+  // parser bug affecting several inter99 pages, not something this photo fixes. The
+  // title "Edmonton, Alberta, Canada" independently matches a well-documented, separate
+  // Sept 21 1999 Edmonton formation; this photo is of that event, not of whatever
+  // Lowville's page actually describes.
+  '/archives/inter99/Lowville99a.html': [
+    {
+      url: 'http://www.cropcirclequest.com/edmonton99/edaerial.jpg',
+      isAerial: true,
+      photographer: 'R. Manuel (farmer, photo credit); report by Judy Arndt',
+      copyrightNotice: 'Recovered from cropcirclequest.com, not the original archive',
+      caption:
+        'Edmonton, Alberta — seven circles, 21 Sept 1999. Note: this record’s source_url is mismatched to an unrelated Lowville, ON page; matched to this photo by title/place/year, not by the scraped source link.',
+    },
+  ],
+};
+
 export function parseCccFormation(fetchResult: FetchResult, _page?: SourcePage): ParsedFormation[] {
   const $ = cheerio.load(fetchResult.html);
   const warnings: string[] = [];
@@ -265,6 +355,18 @@ export function parseCccFormation(fetchResult: FetchResult, _page?: SourcePage):
         'Per-photographer copyright — see http://www.cropcircleconnector.com/anasazi/ImageUsePolicy2004.html',
     });
   });
+
+  for (const extra of MANUAL_EXTRA_PHOTOS[pathname] ?? []) {
+    if (media.some((m) => m.url === extra.url)) continue;
+    media.push({
+      url: extra.url,
+      kind: 'photo',
+      isAerial: extra.isAerial,
+      photographer: extra.photographer,
+      copyrightNotice: extra.copyrightNotice,
+      caption: extra.caption,
+    });
+  }
 
   const description = mergeCaptions(captionParts);
 

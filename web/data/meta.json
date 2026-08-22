@@ -1,12 +1,12 @@
 {
-  "generated": "2026-08-21T19:27:23.114Z",
+  "generated": "2026-08-22T16:02:42.762Z",
   "totals": {
     "records": 3474,
-    "media": 16287,
+    "media": 16296,
     "geocoded": 1408,
     "tagged": 620,
     "withText": 813,
-    "symbolizable": 2923,
+    "symbolizable": 2932,
     "symbols": {},
     "tagProposals": {}
   },
@@ -21,7 +21,7 @@
       "geocoded": 239,
       "described": 587,
       "wayback": 0,
-      "media": 9999
+      "media": 10007
     },
     {
       "key": "ccc",
@@ -33,7 +33,7 @@
       "geocoded": 290,
       "described": 254,
       "wayback": 0,
-      "media": 4614
+      "media": 4615
     },
     {
       "key": "cco",

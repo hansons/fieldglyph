@@ -45,7 +45,7 @@ export function renderEvolution(container) {
         ${topTags.length === 0 ? `<span class="filter-hint">No tagged records in this era (${records.length} records lack descriptive text)</span>` : ''}
       </div>
       <div class="era-thumbs">
-        ${thumbs.map((r) => `<img loading="lazy" src="${esc(r.hi)}" alt="${esc(r.t ?? '')}" title="${esc(r.t ?? '')}" data-id="${r.id}" onerror="this.remove()">`).join('')}
+        ${thumbs.map((r) => `<img loading="lazy" src="${esc(r.hi)}" alt="${esc(r.t ?? '')}" title="${esc(r.t ?? '')}" data-id="${r.id}" referrerpolicy="no-referrer" onerror="this.remove()">`).join('')}
       </div>
       <button data-era="${era.from},${Math.min(era.to, new Date().getFullYear())}">Explore this era on the map →</button>
     </section>`;
